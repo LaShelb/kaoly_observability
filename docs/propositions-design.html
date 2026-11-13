@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trois directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@400;500&family=Roboto+Mono:wght@400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500&family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   Gabarit « carnet » — carnet de recherche clair et aéré.
+   Tiré de docs/directions-visuelles/direction-3-carnet.html, généralisé.
+   Titres Inter Tight léger, étiquettes Roboto Mono sur aplat vert,
+   grandes cartes arrondies sans ombre, sommaire fixe à gauche sur grand écran,
+   mode sombre (prefers-color-scheme + data-theme).
+   À recopier tel quel dans le <style> de chaque page (pas de CSS externe),
+   avec la balise de polices.html dans le <head>.
+   ========================================================================== */
+
+/* ---------- 1. Couleurs et polices ---------- */
+:root{
+  --bg:#f7f7f5; --card:#eeeeee; --card2:#e7e8e1; --surface:#ffffff; --fg:#222f30; --muted:#4d5757; --line:#d8dad1; --edge:#ffffff;
+  --wash:#cef79e; --wash-fg:#222f30; --deep:#445e5f; --sage:#c9cbbe;
+  --blue-wash:#cfe8f4; --blue-fg:#1d3a47;
+  --good:#2c7038; --warn:#94600e; --bad:#a3372d; --neutral:#445e5f; --violet:#5b4c8c;
+  --term:#222f30; --term-fg:#f7f7f5;
+  --display:"Inter Tight",system-ui,sans-serif; --body:"Inter",system-ui,sans-serif; --mono:"Roboto Mono",ui-monospace,monospace;
+  /* Alias du modèle de doc d'origine : les schémas et styles en ligne qui
+     appellent var(--accent) ou var(--good-soft) restent justes. */
+  --accent:var(--deep);
+  --accent-soft:var(--card2);
+  --good-soft:color-mix(in srgb,var(--good) 13%,var(--bg));
+  --warn-soft:color-mix(in srgb,var(--warn) 13%,var(--bg));
+  --bad-soft:color-mix(in srgb,var(--bad) 12%,var(--bg));
+  --violet-soft:color-mix(in srgb,var(--violet) 12%,var(--bg));
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0c1111; --card:#151c1c; --card2:#1a2222; --surface:#111818; --fg:#e7e8e1; --muted:#9ea9a8; --line:#283435; --edge:#222c2d;
+  --wash:#2f4a17; --wash-fg:#e3f7c9; --deep:#8fb3b4; --sage:#4d5757;
+  --blue-wash:#173543; --blue-fg:#d6eef9;
+  --good:#9ad48a; --warn:#e3b065; --bad:#f08c7f; --neutral:#9cc0c1; --violet:#b3a6e6;
+  --term:#000000; --term-fg:#e7e8e1; color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#0c1111; --card:#151c1c; --card2:#1a2222; --surface:#111818; --fg:#e7e8e1; --muted:#9ea9a8; --line:#283435; --edge:#222c2d;
+  --wash:#2f4a17; --wash-fg:#e3f7c9; --deep:#8fb3b4; --sage:#4d5757;
+  --blue-wash:#173543; --blue-fg:#d6eef9;
+  --good:#9ad48a; --warn:#e3b065; --bad:#f08c7f; --neutral:#9cc0c1; --violet:#b3a6e6;
+  --term:#000000; --term-fg:#e7e8e1; color-scheme:dark }
+
+/* ---------- 2. Éléments nus ---------- */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16.5px;line-height:1.65;padding-inline:16px;padding-block:0 96px;overflow-wrap:break-word}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(2.3rem,6.4vw,4.4rem);line-height:1.02;letter-spacing:-.035em;margin:.5em 0 .45em;text-wrap:balance}
+h2{font-family:var(--display);font-weight:400;font-size:clamp(1.65rem,3.6vw,2.3rem);line-height:1.1;letter-spacing:-.025em;margin:2.8em 0 .6em;text-wrap:balance;scroll-margin-top:72px}
+h3{font-family:var(--display);font-weight:500;font-size:1.15rem;letter-spacing:-.01em;margin:1.5em 0 .4em;scroll-margin-top:72px}
+h4{font-family:var(--display);font-weight:500;font-size:1rem;letter-spacing:-.005em;margin:1.3em 0 .3em}
+p,li{max-width:68ch} p{margin:.7em 0}
+li{margin:.3em 0}
+ul,ol{padding-left:1.3em}
+a{color:var(--fg);text-decoration-color:var(--deep);text-underline-offset:3px}
+a:hover{background:var(--wash);color:var(--wash-fg)}
+strong,b{font-weight:600}
+small{font-size:.85em}
+sup,sub{font-size:.7em;line-height:0}
+mark{background:var(--wash);color:var(--wash-fg);padding:0 4px;border-radius:4px}
+abbr[title]{text-decoration:underline dotted var(--muted);text-underline-offset:3px;cursor:help}
+kbd{font-family:var(--mono);font-size:.8em;border:1px solid var(--line);background:var(--surface);border-radius:5px;padding:0 5px}
+hr{border:0;border-top:1px solid var(--line);margin:48px 0}
+img,video{max-width:100%;height:auto;border-radius:20px}
+dl{margin:.6em 0 1em}
+dt{font-family:var(--display);font-weight:500;letter-spacing:-.01em;margin-top:.8em}
+dd{margin:.15em 0 0;max-width:68ch}
+details{background:var(--card);border:1px solid var(--edge);border-radius:20px;padding:12px 20px;margin:16px 0}
+summary{font-family:var(--display);font-weight:500;cursor:pointer}
+details[open] summary{margin-bottom:.4em}
+button{font-family:var(--mono);font-size:.76rem;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:4px 12px;cursor:pointer}
+button:hover{background:var(--wash);color:var(--wash-fg);border-color:transparent}
+input[type="checkbox"],input[type="radio"]{accent-color:var(--deep)}
+:focus-visible{outline:2px solid var(--deep);outline-offset:2px}
+
+/* ---------- 3. Mise en page : colonne, en-tête, sommaire ---------- */
+.wrap{max-width:780px;margin:0 auto}
+header.hero{padding-block:72px 40px}
+.eyebrow{display:inline-block;font-family:var(--mono);font-size:.74rem;letter-spacing:-.01em;background:var(--wash);color:var(--wash-fg);padding:3px 8px;border-radius:4px;line-height:1.5;text-transform:none}
+.lead{font-size:1.2rem;line-height:1.5;color:var(--muted);max-width:56ch}
+.small{font-size:.85rem;color:var(--muted)}
+.muted{color:var(--muted)}
+.q{font-family:var(--display);font-weight:500;font-size:1.3rem;letter-spacing:-.015em}
+ul.tight li,ol.tight li{margin:.35em 0}
+
+/* Sommaire : bandeau collant qui défile à l'horizontale sur petit écran… */
+nav.toc{position:sticky;top:0;background:var(--bg);padding:10px 16px;margin:0 -16px;z-index:5;overflow-x:auto;border-bottom:1px solid var(--line)}
+nav.toc ul,nav.toc ol{list-style:none;margin:0 auto;padding:0;display:flex;gap:6px;white-space:nowrap;max-width:780px}
+nav.toc li{margin:0;max-width:none}
+nav.toc a{display:block;font-family:var(--mono);font-size:.74rem;text-decoration:none;color:var(--muted);padding:3px 9px;border-radius:20px;border:1px solid var(--line)}
+nav.toc a:hover{background:var(--wash);color:var(--wash-fg);border-color:transparent}
+/* …colonne fixe à gauche sur grand écran (seulement si la page a un sommaire). */
+@media (min-width:1200px){
+  .wrap:has(nav.toc){max-width:1100px;padding-left:280px}
+  nav.toc{position:fixed;top:72px;left:calc(50% - 550px);width:220px;margin:0;padding:0;background:none;border:0;overflow:visible;max-height:calc(100vh - 96px);overflow-y:auto}
+  nav.toc::before{content:"Sommaire";display:block;font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-bottom:12px}
+  nav.toc ul,nav.toc ol{flex-direction:column;gap:2px;white-space:normal}
+  nav.toc a{border:0;padding:4px 10px;margin-left:-10px;font-size:.78rem}
+}
+
+/* ---------- 4. Encadrés et cartes ---------- */
+.verdict{background:var(--card2);border:1px solid var(--edge);border-radius:32px;padding:32px 36px 24px;margin:12px 0 32px}
+.verdict h2{margin-top:0;font-size:1.9rem}
+.verdict>:last-child{margin-bottom:0}
+
+.callout{border:1px solid var(--edge);background:var(--card);padding:18px 22px;border-radius:24px;margin:22px 0}
+.callout p:first-child{margin-top:0}.callout p:last-child{margin-bottom:0}
+.callout>ul:last-child,.callout>ol:last-child{margin-bottom:0}
+.callout.good{background:var(--wash);color:var(--wash-fg);border-color:transparent}
+.callout.good a{color:var(--wash-fg)}
+.callout.good code{background:color-mix(in srgb,var(--wash-fg) 9%,transparent)}
+.callout.warn{background:var(--surface);border:1px solid var(--line);padding:22px 26px}
+.callout.bad{background:color-mix(in srgb,var(--bad) 7%,var(--surface));border:1px solid color-mix(in srgb,var(--bad) 30%,var(--line))}
+/* « À confirmer » : toujours en pointillé, y compris « callout warn unsure ». */
+.callout.unsure,.callout.warn.unsure{border:1.5px dashed var(--warn);background:transparent}
+
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:22px 0}
+.grid2>div{background:var(--surface);border:1px solid var(--line);padding:18px 20px;border-radius:24px;min-width:0}
+.grid2 h3{margin-top:0;font-family:var(--mono);font-weight:400;font-size:.74rem;letter-spacing:-.01em;color:var(--muted)}
+.grid2 ul{padding-left:1.1em}
+.grid2>div>:last-child{margin-bottom:0}
+
+.card{background:var(--card);border:1px solid var(--edge);border-radius:24px;padding:18px 22px;margin:18px 0}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:22px 0}
+.tile{background:var(--surface);border:1px solid var(--line);padding:18px 20px;border-radius:24px;min-width:0}
+.tile .n{font-family:var(--display);font-weight:400;font-size:2rem;line-height:1.05;letter-spacing:-.035em;font-variant-numeric:tabular-nums}
+.tile .l{font-size:.85rem;color:var(--muted);margin-top:6px}
+
+.kpi{font-family:var(--display);font-weight:400;font-size:2.9rem;line-height:1;letter-spacing:-.04em;margin:.15em 0 .15em;font-variant-numeric:tabular-nums}
+
+/* Semaine d'un plan : date à gauche, contenu à droite. */
+.week{display:grid;grid-template-columns:130px 1fr;gap:4px 20px;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:20px 24px;margin:14px 0}
+.week>:not(.when){grid-column:2;min-width:0}
+.week .when{font-family:var(--mono);font-size:.74rem;line-height:1.5;color:var(--muted)}
+.week h3{margin:0 0 .3em}
+.week ul{margin:.2em 0;padding-left:1.1em}
+.week .num{font-family:var(--mono);font-size:.76rem;line-height:1.5;color:var(--wash-fg);background:var(--wash);border-radius:12px;padding:8px 12px;margin-top:.8em}
+
+/* Étapes numérotées. */
+.step{display:grid;grid-template-columns:44px 1fr;gap:16px;margin:20px 0;align-items:start}
+.step>.w{font-family:var(--mono);font-size:.8rem;width:36px;height:36px;border-radius:50%;background:var(--wash);color:var(--wash-fg);display:grid;place-items:center}
+.step>:not(.w){min-width:0}
+.step h3{margin:0 0 .3em}
+
+/* Cases à cocher : liste simple ou étiquettes cliquables. */
+ul.chk{list-style:none;padding:0}
+ul.chk li{padding-left:28px;position:relative;margin:.45em 0;max-width:none}
+ul.chk li::before{content:"";position:absolute;left:0;top:.35em;width:14px;height:14px;border:1.5px solid var(--sage);border-radius:4px}
+label.chk{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px dashed var(--line);max-width:none}
+label.chk input{margin-top:5px;accent-color:var(--deep)}
+label.chk:has(input:checked) span{color:var(--muted);text-decoration:line-through}
+.prog{height:8px;background:var(--card2);border-radius:20px;overflow:hidden;margin:8px 0 4px}
+.prog>div{height:100%;background:var(--deep);width:0%;border-radius:20px}
+
+blockquote{margin:24px 0;background:var(--card);border:1px solid var(--edge);border-radius:24px;padding:18px 24px;font-family:var(--display);font-weight:400;font-size:1.12rem;line-height:1.5;letter-spacing:-.01em}
+blockquote p{margin:.3em 0}
+blockquote cite{display:block;font-family:var(--mono);font-size:.72rem;letter-spacing:-.01em;color:var(--muted);font-style:normal;margin-top:8px}
+
+/* ---------- 5. Étiquettes, code, figures, tableaux ---------- */
+.pill{display:inline-block;font-family:var(--mono);font-size:.7rem;padding:1px 9px;border-radius:20px;white-space:nowrap;vertical-align:1px;margin-right:2px}
+.pill.good{background:color-mix(in srgb,var(--good) 13%,transparent);color:var(--good)}
+.pill.warn{background:color-mix(in srgb,var(--warn) 13%,transparent);color:var(--warn)}
+.pill.bad{background:color-mix(in srgb,var(--bad) 12%,transparent);color:var(--bad)}
+.pill.neutral{background:var(--card2);color:var(--neutral)}
+.pill.violet{background:color-mix(in srgb,var(--violet) 12%,transparent);color:var(--violet)}
+.pill.muted{background:var(--card2);color:var(--muted)}
+.pill.unsure{background:transparent;border:1px dashed var(--warn);color:var(--warn)}
+.tag{display:inline-block;font-family:var(--mono);font-size:.7rem;padding:1px 9px;border-radius:20px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+small.hyp{color:var(--warn);font-family:var(--mono);font-size:.72rem}
+
+code{font-family:var(--mono);font-size:.84em;background:var(--card2);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+pre{font-family:var(--mono);font-size:.8rem;background:var(--term);color:var(--term-fg);border-radius:20px;padding:18px 22px;overflow-x:auto;line-height:1.65;max-width:100%}
+pre code{background:none;padding:0;font-size:inherit;color:inherit;overflow-wrap:normal}
+
+figure{margin:32px 0;background:var(--card);border:1px solid var(--edge);border-radius:28px;padding:26px 24px 18px;overflow-x:auto}
+figure svg{display:block;max-width:100%;height:auto;min-width:560px;overflow:visible} /* Roboto Mono est plus large que l'ancienne police : les étiquettes en bord de schéma débordent dans la marge du cadre au lieu d'être coupées */
+figure img{display:block;margin:0 auto}
+figcaption{font-size:.84rem;color:var(--muted);margin-top:14px;max-width:none}
+
+.tablewrap{overflow-x:auto;margin:20px 0}
+table{border-collapse:collapse;width:100%;font-size:.86rem;line-height:1.5}
+caption{caption-side:top;text-align:left;font-family:var(--mono);font-size:.72rem;color:var(--muted);padding-bottom:8px}
+th,td{text-align:left;vertical-align:top;padding:11px 14px 11px 0;border-bottom:1px solid var(--line)}
+th{font-family:var(--mono);font-size:.7rem;color:var(--muted);font-weight:400;letter-spacing:-.01em;text-transform:none}
+th.num{text-align:right}
+td.num{text-align:right;font-family:var(--mono);font-size:.8rem;white-space:nowrap}
+td strong{font-weight:600}
+.sources{font-size:.86rem}
+.sources li{margin:.3em 0;max-width:none;word-break:break-word}
+.url{display:block;font-family:var(--mono);font-size:.72rem;color:var(--muted);overflow-wrap:anywhere;margin-top:2px}
+
+/* ---------- 6. À confirmer (générique) ---------- */
+.unsure{border-style:dashed!important;border-color:var(--warn)!important}
+td.unsure{border:1px dashed var(--warn);background:color-mix(in srgb,var(--warn) 6%,transparent);padding-left:10px}
+tr.unsure>td{border-bottom:1px dashed var(--warn);background:color-mix(in srgb,var(--warn) 5%,transparent)}
+
+/* ---------- 7. Schémas SVG ---------- */
+.t{font-family:var(--body);font-size:11.5px;letter-spacing:-.01em;fill:var(--fg)}
+.ts{font-family:var(--body);font-size:11px;fill:var(--muted)}
+.tb{font-family:var(--display);font-weight:500;font-size:14px;fill:var(--fg)}
+.tm{font-family:var(--mono);font-size:10px;fill:var(--muted);paint-order:stroke;stroke:var(--card);stroke-width:3px;stroke-linejoin:round}
+.lbl,.k14{font-family:var(--body);font-size:14px;fill:var(--fg)}
+.chart-text{font-family:var(--body);font-size:12px;fill:var(--fg)}
+.chart-muted{font-family:var(--mono);font-size:10.5px;fill:var(--muted)}
+.chart-grid{stroke:var(--line);stroke-width:1}
+.box{fill:var(--surface);stroke:var(--sage);stroke-width:1;rx:10}
+.box.hi{stroke:var(--fg);stroke-width:1.3}
+.box.src{fill:var(--blue-wash);stroke:transparent}
+.box.src + .tb,.box.src + .tb + .tm,.box.src + .tb + .t{fill:var(--blue-fg)}
+.box.src + .tb + .tm{stroke:var(--blue-wash)}
+.box.unsure{stroke:var(--warn);stroke-dasharray:5 4;stroke-width:1.3}
+.box.no{fill:var(--bg);stroke:var(--line);stroke-dasharray:3 3}
+/* Boîtes colorées des anciens schémas, ramenées à la palette carnet. */
+.boxa{fill:var(--card2);stroke:var(--deep);stroke-width:1;rx:10}
+.boxg{fill:var(--wash);stroke:transparent;rx:10}
+.boxv{fill:color-mix(in srgb,var(--violet) 12%,var(--surface));stroke:var(--violet);stroke-width:1;rx:10}
+.boxw{fill:color-mix(in srgb,var(--warn) 10%,var(--surface));stroke:var(--warn);stroke-width:1;rx:10}
+.boxu{fill:var(--surface);stroke:var(--warn);stroke-width:1.3;stroke-dasharray:5 4;rx:10}
+.boxp{fill:var(--blue-wash);stroke:transparent;rx:10}
+.arrow{stroke:var(--deep);stroke-width:1.2;fill:none;marker-end:url(#ar)}
+.arrow.hi{stroke:var(--fg);stroke-width:1.6;marker-end:url(#arhi)}
+.ln{stroke:var(--muted);stroke-width:1.2;fill:none}
+.lna{stroke:var(--deep);stroke-width:1.6;fill:none}
+.lnv{stroke:var(--violet);stroke-width:1.4;fill:none}
+.bar{fill:var(--deep);rx:9} .bar.rej{fill:var(--bad)} .bar.base{fill:var(--sage)}
+
+/* ---------- 8. Petits écrans (390 px compris) ---------- */
+@media (max-width:640px){
+  .week{grid-template-columns:1fr}
+  .week>:not(.when){grid-column:1}
+}
+@media (max-width:560px){
+  header.hero{padding-top:48px}
+  .verdict{padding:22px 18px 16px;border-radius:24px}
+  figure{padding:18px 14px 12px;border-radius:20px}
+  .callout{padding:16px 16px}
+  .callout.warn{padding:18px 18px}
+  .grid2>div,.tile,.week{border-radius:20px}
+  .week{padding:16px 16px}
+  pre{border-radius:16px;padding:14px 16px}
+  /* Les tableaux défilent dans leur cadre ; .tablewrap.narrow les laisse se replier. */
+  .tablewrap table{min-width:600px}
+  .tablewrap.narrow table{min-width:0}
+  table:not(.tablewrap table){display:block;overflow-x:auto}
+}
+
+
+/* ---------- Ajouts de ce document ---------- */
+.wide{position:relative;left:50%;transform:translateX(-50%);width:min(1260px,calc(100vw - 16px));overflow-x:auto;padding:30px 70px 80px}
+.wide>.win{margin:0 auto}
+.idrow{display:flex;gap:28px;align-items:center;flex-wrap:wrap;margin:26px 0 8px}
+.idrow .big{filter:drop-shadow(0 18px 24px rgba(0,0,0,.16)) drop-shadow(0 2px 3px rgba(0,0,0,.12))}
+.idrow .sizes{display:flex;gap:14px;align-items:flex-end}
+.idrow .sizes svg{filter:drop-shadow(0 3px 5px rgba(0,0,0,.15))}
+.dock{display:flex;gap:18px;align-items:flex-start;padding:14px 18px;border-radius:22px;background:var(--card);border:1px solid var(--edge);margin-top:4px}
+.dock .d{display:flex;flex-direction:column;align-items:center;gap:6px;width:92px}
+.dock .ph{width:56px;height:56px;border-radius:13px;border:1.5px dashed var(--sage)}
+.dock span{font-size:11.5px;line-height:1.25;color:var(--muted);text-align:center}
+.dock .me span{color:var(--fg);font-weight:500}
+.dock svg{filter:drop-shadow(0 3px 5px rgba(0,0,0,.15))}
+.name{font-family:var(--display);font-size:2.6rem;line-height:1;letter-spacing:-.035em}
+.name small{display:block;font-family:var(--mono);font-size:.72rem;letter-spacing:-.01em;color:var(--muted);margin-top:10px}
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:18px 0}
+.sw div{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:10px 12px;font-size:.8rem;line-height:1.35}
+.sw i{display:block;height:34px;border-radius:9px;margin-bottom:8px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.sw b{font-weight:500;display:block}
+.sw code{background:none;padding:0;color:var(--muted);font-size:.72rem}
+.type{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin:10px 0 0}
+.type div{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;min-width:0}
+.type p{margin:6px 0 0;font-size:.8rem;color:var(--muted)}
+.cmp td:first-child{font-family:var(--mono);font-size:.72rem;color:var(--muted);white-space:nowrap}
+
+/* ---------- La fenêtre maquette (commun aux trois directions) ---------- */
+.win,.win *{box-sizing:border-box}
+.win{--side:210px;position:relative;width:1120px;height:800px;border-radius:12px;overflow:hidden;display:flex;box-shadow:0 0 0 .5px rgba(0,0,0,.22),0 30px 70px -10px rgba(0,0,0,.28),0 10px 20px -8px rgba(0,0,0,.12);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;text-align:left}
+.win button,.win input{font:inherit;color:inherit;background:none;border:0;border-radius:0;padding:0;margin:0}
+.win button:hover{background:none;color:inherit}
+.win a{text-decoration:none;color:inherit}
+.win a:hover{background:none;color:inherit}
+.win h1{margin:0;font-size:inherit}
+.win p{max-width:none}
+.win table{width:840px;table-layout:fixed;border-collapse:collapse;font-size:13.5px;line-height:1.3}
+.win th,.win td{padding:0;border:0;vertical-align:middle;text-align:right;white-space:nowrap}
+.win th:first-child,.win td:first-child{text-align:left}
+.win th{font-family:inherit;text-transform:none;letter-spacing:normal}
+.win svg{display:block}
+.lights{position:absolute;top:16px;left:18px;display:flex;gap:8px;z-index:3}
+.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.15)}
+.lights i:nth-child(2){background:#febc2e}.lights i:nth-child(3){background:#28c840}
+.win aside{width:var(--side);flex:none;padding:52px 14px 16px;display:flex;flex-direction:column}
+.win .brand{display:flex;align-items:center;gap:9px;padding:0 8px 16px}
+.win .find{display:flex;align-items:center;gap:8px;padding:6px 9px;margin-bottom:14px}
+.win .find kbd{all:unset;margin-left:auto;font-size:11px;opacity:.7}
+.win nav a{display:flex;align-items:center;gap:10px;padding:7px 9px;margin-bottom:2px}
+.win nav svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.win nav b{margin-left:auto;font-weight:500}
+.win .src{margin-top:auto;display:flex;flex-direction:column;gap:9px;padding:0 8px;font-size:12.5px}
+.win .src div{display:grid;grid-template-columns:14px 1fr;align-items:baseline}
+.win .src i{width:6px;height:6px;border-radius:50%;display:block;transform:translateY(-1px)}
+.win .src small{grid-column:2;display:block;font-size:11.5px;opacity:.65}
+.win main{position:relative;flex:1;min-width:0;height:100%;overflow-y:auto;padding:30px 35px 120px}
+.win header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px}
+.win .kpis{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;margin-bottom:22px}
+.win .k{display:flex;flex-direction:column;min-width:0}
+.win .k .v{white-space:nowrap;font-variant-numeric:tabular-nums}
+.win .chips{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.win .chips button{display:inline-flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap}
+.win .chips .add{margin-left:auto}
+.chartwrap{position:relative;width:840px}
+.chart .hit{fill:transparent;cursor:crosshair}
+.chart .band{pointer-events:none;transition:x .12s ease-out,opacity .12s}
+.chart .reveal{transform-box:fill-box;transform-origin:left center;animation:reveal 1.1s cubic-bezier(.2,.7,.2,1) both}
+@keyframes reveal{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@media (prefers-reduced-motion:reduce){.chart .reveal{animation:none}}
+.tip{position:absolute;top:8px;z-index:2;pointer-events:none;min-width:168px;font-size:12.5px;line-height:1.5;transition:left .12s ease-out}
+.tip[hidden]{display:none}
+.tip .r{display:grid;grid-template-columns:12px 1fr auto;gap:6px;align-items:center}
+.tip .r i{width:9px;height:0;border-top:2px solid}
+.tip .r svg{width:12px;height:6px}
+.tip .r span{font-variant-numeric:tabular-nums;text-align:right}
+.tip .vv{margin-top:4px;padding-top:4px}
+.win .plan td,.win .plan th{height:33px;padding:0 8px 0 0}
+.win .plan td:first-child,.win .plan th:first-child{padding-left:0}
+.win .plan .nm{display:flex;align-items:baseline;gap:8px;overflow:hidden}
+.win .plan .nm small{font-size:12px;overflow:hidden;text-overflow:ellipsis}
+.win .plan tr.grp td{height:30px;padding-top:10px;vertical-align:bottom}
+.win .plan td.n{font-variant-numeric:tabular-nums}
+.win .plan .est{text-decoration:underline dashed;text-underline-offset:4px;text-decoration-thickness:1px}
+.win .composer{position:absolute;left:calc(var(--side) + 70px);right:70px;bottom:20px;display:flex;align-items:center;gap:12px;z-index:4}
+.win .composer input{flex:1;min-width:0;outline:0}
+.win .composer .model{font-size:12.5px;white-space:nowrap}
+.win .crop{display:none}
+.win .fade{position:absolute;left:var(--side);right:0;bottom:0;height:120px;pointer-events:none;z-index:3;background:linear-gradient(to top,var(--base) 45%,transparent)}
+
+/* ==========================================================================
+   1. VIGIE — ciel clair. Principal : Column. Emprunts : ciel d'Altitude, graphique nu de Mercury.
+   ========================================================================== */
+.t-vg{--base:#f6f7f9;--ink:#14204a;--ink2:rgba(20,32,74,.62);--mute:#7c7f88;--rule:rgba(20,32,74,.09);--green:#167e6c;--orange:#d9622b;--hl:rgba(69,117,205,.08);
+  font-family:"Geist",ui-sans-serif,system-ui,sans-serif;color:var(--ink);
+  background:linear-gradient(180deg,#c9dfed 0,#e3eef5 190px,#f2f5f8 380px,#f6f7f9 560px)}
+.t-vg aside{background:transparent}
+.t-vg .brand span{font-weight:600;font-size:15px;letter-spacing:-.02em}
+.t-vg .find{border-radius:8px;background:rgba(255,255,255,.5);box-shadow:0 0 0 1px rgba(87,90,100,.12);color:var(--mute);font-size:13px}
+.t-vg nav a{border-radius:8px;color:var(--ink2);font-weight:500;font-size:13.5px}
+.t-vg nav a:hover{background:rgba(255,255,255,.35)}
+.t-vg nav a.on{background:rgba(255,255,255,.72);color:var(--ink);box-shadow:inset 0 0 0 1px #fff,0 1px 2px rgba(20,32,74,.07)}
+.t-vg nav b{color:var(--orange);font-size:12px}
+.t-vg .src{color:var(--ink2)} .t-vg .src i{background:var(--green)}
+.t-vg header h1{font-weight:600;font-size:28px;letter-spacing:-.03em}
+.t-vg header .date{font-family:"Geist Mono",monospace;font-size:11px;text-transform:uppercase;color:var(--ink2)}
+.t-vg .k .l{font-size:12.5px;color:var(--ink2)}
+.t-vg .k .v{font-size:23px;font-weight:500;letter-spacing:-.025em;line-height:1.35}
+.t-vg .k.big .v{font-size:46px;font-weight:560;letter-spacing:-.04em;line-height:1.08}
+.t-vg .k .v small{font-size:14px;font-weight:400;color:var(--ink2);letter-spacing:0}
+.t-vg .k .s{font-size:12px;color:var(--mute)}
+.t-vg .neg{color:var(--ink)} .t-vg .pos{color:var(--green)} .t-vg .late{color:var(--orange);font-style:normal}
+.t-vg .chips button{height:30px;padding:0 11px;border-radius:8px;font-size:13px;color:var(--ink2);background:rgba(255,255,255,.45);box-shadow:0 0 0 1px rgba(87,90,100,.12)}
+.t-vg .chips button.on{background:#fff;color:var(--ink);box-shadow:0 0 0 1px rgba(20,32,74,.12),0 1px 3px rgba(20,32,74,.08)}
+.t-vg .chips button i{width:12px;height:0;border-top:2px dashed}
+.t-vg .chips button b{font-weight:500;font-size:12px;color:var(--mute)}
+.t-vg .chips .add{font-size:13px;color:var(--ink2)}
+.t-vg .chart text{font-family:"Geist Mono",monospace;font-size:10px;fill:#8a8d96}
+.t-vg .tip{background:rgba(17,26,60,.94);color:#eef1f8;border-radius:8px;padding:9px 11px;box-shadow:0 12px 30px -8px rgba(17,26,60,.45)}
+.t-vg .tip b{font-weight:500}
+.t-vg .tip .vv{border-top:1px solid rgba(255,255,255,.14);color:#aab4cf}
+.t-vg .plan th{font-family:"Geist Mono",monospace;font-size:10.5px;font-weight:400;text-transform:uppercase;color:var(--mute);height:30px}
+.t-vg .plan td{border-top:1px solid var(--rule)}
+.t-vg .plan tr.sum td{font-weight:560;border-top:0;background:rgba(255,255,255,.7)}
+.t-vg .plan tr.sum td:first-child{border-radius:8px 0 0 8px;padding-left:12px}
+.t-vg .plan tr.sum td:last-child{border-radius:0 8px 8px 0;padding-right:12px}
+.t-vg .plan tr.sum+tr td{border-top:0}
+.t-vg .plan tr.grp td{border-top:0;font-family:"Geist Mono",monospace;font-size:10.5px;text-transform:uppercase;color:var(--mute)}
+.t-vg .plan .nm small{color:var(--mute)}
+.t-vg .plan td.hl,.t-vg .plan th.hl{background:var(--hl)}
+.t-vg .plan tr.sum td.hl{background:#e9f0fa}
+.t-vg .composer{padding:7px 7px 7px 16px;border-radius:12px;background:rgba(255,255,255,.78);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);box-shadow:0 24px 48px -16px rgba(30,30,44,.28),inset 0 0 0 1px #fff,0 0 0 1px rgba(20,32,74,.06)}
+.t-vg .composer .lbl{display:none}
+.t-vg .composer input::placeholder{color:#8a8d96}
+.t-vg .composer .model{color:var(--ink2)}
+.t-vg .composer .send{width:34px;height:34px;border-radius:8px;background:var(--ink);color:#fff;display:grid;place-items:center;box-shadow:0 0 0 1px var(--ink),0 2px 4px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.12)}
+
+/* ==========================================================================
+   2. GRAND LIVRE — encre bleue. Principal : Fidèle Éditions. Emprunts : chiffres en serif (Plaid),
+   tableaux à filets façon registre (The Prompting Company, dans tes goûts).
+   ========================================================================== */
+.t-gl{--base:#f7f5ee;--ink:#1f47c8;--ink2:rgba(31,71,200,.62);--rule:rgba(31,71,200,.16);--red:#c33a2c;--paper:#f7f5ee;--hl:rgba(31,71,200,.055);
+  font-family:"Instrument Sans",ui-sans-serif,system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+.t-gl .lights i{background:transparent;box-shadow:inset 0 0 0 1px var(--rule)}
+.t-gl aside{border-right:1px solid var(--rule)}
+.t-gl .brand span{font-size:16px;letter-spacing:-.01em}
+.t-gl .find{border-bottom:1px solid var(--rule);padding:6px 2px;margin:0 8px 16px;color:var(--ink2);font-size:13.5px}
+.t-gl nav a{color:var(--ink);font-size:14.5px;padding:6px 8px;white-space:nowrap}
+.t-gl nav a.on{font-weight:600}
+.t-gl nav a:not(.on):hover{text-decoration:underline;text-underline-offset:4px}
+.t-gl nav b{color:var(--red);font-weight:400;font-size:13px}
+.t-gl .src{color:var(--ink2)} .t-gl .src i{background:var(--ink)}
+.t-gl header{border-bottom:1px solid var(--ink);padding-bottom:12px;margin-bottom:0}
+.t-gl header h1{font-weight:400;font-size:38px;letter-spacing:-.025em;line-height:1}
+.t-gl header .date{font-size:13px;color:var(--ink2)}
+.t-gl .kpis{margin-bottom:18px}
+.t-gl .k{padding:14px 18px 0;border-left:1px solid var(--rule)}
+.t-gl .k:first-child{border-left:0;padding-left:0}
+.t-gl .k .l{font-size:13px;color:var(--ink2)}
+.t-gl .k .v{font-family:"Source Serif 4",Georgia,serif;font-variant-numeric:tabular-nums lining-nums;font-size:28px;font-weight:400;letter-spacing:-.01em;line-height:1.3}
+.t-gl .k.big .v{font-size:58px;font-weight:300;letter-spacing:-.03em;line-height:1.05;font-variation-settings:"opsz" 60}
+.t-gl .k .v small{font-family:"Instrument Sans",sans-serif;font-size:14px;color:var(--ink2)}
+.t-gl .k .s{font-size:12.5px;color:var(--ink2)}
+.t-gl .neg,.t-gl .late{color:var(--red);font-style:normal}
+.t-gl .chips{gap:20px;border-top:1px solid var(--rule);padding-top:10px}
+.t-gl .chips button{font-size:13.5px;color:var(--ink2);padding-bottom:2px;border-bottom:1px solid transparent}
+.t-gl .chips button.on{color:var(--ink);border-bottom-color:var(--ink)}
+.t-gl .chips button svg{width:22px;height:6px}
+.t-gl .chips button b{font-weight:400;font-size:12.5px;color:var(--ink2)}
+.t-gl .chips .add{font-size:13.5px;text-decoration:underline;text-underline-offset:4px}
+.t-gl .chart text{font-family:"Source Serif 4",Georgia,serif;font-size:11px;fill:var(--ink2)}
+.t-gl .tip{background:var(--paper);border:1px solid var(--ink);color:var(--ink);padding:8px 11px;min-width:180px}
+.t-gl .tip b{font-weight:600}
+.t-gl .tip .r span{font-family:"Source Serif 4",serif}
+.t-gl .tip .r i{border-top-style:dashed}
+.t-gl .tip .vv{border-top:1px solid var(--rule)}
+.t-gl .plan th{font-size:12.5px;font-weight:400;color:var(--ink2);height:30px;border-bottom:1px solid var(--ink)}
+.t-gl .plan td{border-bottom:1px solid var(--rule)}
+.t-gl .plan td.n{font-family:"Source Serif 4",Georgia,serif;font-size:14px}
+.t-gl .plan tr.sum td{font-weight:600;border-bottom:3px double var(--ink)}
+.t-gl .plan tr.sum td.n{font-weight:500}
+.t-gl .plan tr.grp td{border-bottom:0;font-size:12.5px;color:var(--ink2);font-style:normal}
+.t-gl .plan .nm small{color:var(--ink2)}
+.t-gl .plan td.hl,.t-gl .plan th.hl{background:var(--hl)}
+.t-gl .composer{left:calc(var(--side) + 35px);right:35px;bottom:0;border-top:1px solid var(--ink);padding:13px 0 18px;background:var(--paper)}
+.t-gl .composer .lbl{font-size:13.5px;color:var(--ink2);white-space:nowrap}
+.t-gl .composer input{font-size:15px}
+.t-gl .composer input::placeholder{color:var(--ink2)}
+.t-gl .composer .model{color:var(--ink2)}
+.t-gl .composer .send{font-size:14px;text-decoration:underline;text-underline-offset:4px;white-space:nowrap}
+.t-gl .composer .send::before{content:"Envoyer "}
+
+/* ==========================================================================
+   3. RELEVÉ — papier technique. Principal : Spade (tes goûts). Emprunts : coins en équerre
+   et étiquettes mono numérotées (Antimetal), micro-étiquettes ■ (CTGT, tes goûts).
+   ========================================================================== */
+.t-sx{--base:#eaf0df;--ink:#17290f;--ink2:rgba(23,41,15,.66);--rule:rgba(23,41,15,.16);--dash:rgba(23,41,15,.32);--green:#5b7c3f;--rust:#a8452a;--paper:#eaf0df;--hl:rgba(23,41,15,.065);
+  font-family:"Schibsted Grotesk",ui-sans-serif,system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+.t-sx .lights i{background:transparent;box-shadow:inset 0 0 0 1px var(--dash)}
+.t-sx aside{border-right:1px dashed var(--dash)}
+.t-sx .brand span{font-weight:600;font-size:16px;letter-spacing:-.02em}
+.t-sx .find{border:1px dashed var(--dash);font-family:"IBM Plex Mono",monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2)}
+.t-sx nav a{font-family:"IBM Plex Mono",monospace;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink);padding:8px 9px;white-space:nowrap}
+.t-sx nav a svg{display:none}
+.t-sx nav a::before{content:attr(data-n);color:var(--ink2);width:18px}
+.t-sx nav a.on{background:var(--ink);color:var(--paper)} .t-sx nav a.on::before{color:rgba(234,240,223,.6)}
+.t-sx nav a:not(.on):hover{background:var(--hl)}
+.t-sx nav b{color:var(--rust);font-weight:500}
+.t-sx nav a.on b{color:#f0b49a}
+.t-sx .src{color:var(--ink2);font-family:"IBM Plex Mono",monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em}
+.t-sx .src small{text-transform:none;letter-spacing:0;font-family:"Schibsted Grotesk",sans-serif;font-size:11.5px}
+.t-sx .src i{background:var(--green);border-radius:0}
+.t-sx .crop{display:block;position:absolute;width:14px;height:14px;border:0 solid var(--ink)}
+.t-sx .crop.tl{top:12px;left:12px;border-top-width:1px;border-left-width:1px}
+.t-sx .crop.tr{top:12px;right:12px;border-top-width:1px;border-right-width:1px}
+.t-sx header h1{font-weight:600;font-size:30px;letter-spacing:-.035em}
+.t-sx header .date{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+.t-sx .k .l{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink2);margin-bottom:4px}
+.t-sx .k .l::before{content:"";display:inline-block;width:6px;height:6px;background:var(--ink);margin-right:7px;transform:translateY(-1px)}
+.t-sx .k .v{font-size:24px;font-weight:600;letter-spacing:-.03em;line-height:1.3}
+.t-sx .k.big .v{font-size:50px;font-weight:600;letter-spacing:-.045em;line-height:1.02}
+.t-sx .k .v small{font-size:14px;font-weight:400;color:var(--ink2);letter-spacing:0}
+.t-sx .k .s{font-size:12px;color:var(--ink2)}
+.t-sx .neg,.t-sx .late{color:var(--rust);font-style:normal}
+.t-sx .chips button{position:relative;border:1px dashed var(--dash)} .t-sx .composer{border:1px dashed var(--dash)}
+.t-sx .chips button{height:30px;padding:0 11px;font-size:13px;color:var(--ink2)}
+.t-sx .chips button.on{color:var(--ink);border-color:transparent}
+.t-sx .chips button.on::before,.t-sx .chips button.on::after,.t-sx .composer::before,.t-sx .composer::after{content:"";position:absolute;width:7px;height:7px;border:0 solid var(--ink)}
+.t-sx .chips button.on::before,.t-sx .composer::before{top:-1px;left:-1px;border-top-width:1.5px;border-left-width:1.5px}
+.t-sx .chips button.on::after,.t-sx .composer::after{bottom:-1px;right:-1px;border-bottom-width:1.5px;border-right-width:1.5px}
+.t-sx .chips button i{width:12px;height:0;border-top:2px dashed}
+.t-sx .chips button b{font-family:"IBM Plex Mono",monospace;font-weight:400;font-size:10.5px;letter-spacing:.03em;color:var(--ink2)}
+.t-sx .chips .add{font-family:"IBM Plex Mono",monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2)}
+.t-sx .chart text{font-family:"IBM Plex Mono",monospace;font-size:9.5px;fill:var(--ink2)}
+.t-sx .chart .ann text{fill:var(--ink);font-size:9.5px;letter-spacing:.06em}
+.t-sx .tip{background:#fff;color:var(--ink);padding:9px 11px;box-shadow:0 0 0 1px var(--ink)}
+.t-sx .tip b{font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
+.t-sx .tip .r span{font-weight:600}
+.t-sx .tip .vv{border-top:1px dashed var(--dash)}
+.t-sx .plan th{font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);height:28px}
+.t-sx .plan td{border-top:1px solid var(--rule)}
+.t-sx .plan td.n{font-family:"IBM Plex Mono",monospace;font-size:12.5px;letter-spacing:-.02em}
+.t-sx .plan tr.sum td{background:var(--ink);color:var(--paper);border-top:0;font-weight:600}
+.t-sx .plan tr.sum td:first-child{padding-left:12px} .t-sx .plan tr.sum td:last-child{padding-right:12px}
+.t-sx .plan tr.sum+tr td{border-top:0}
+.t-sx .plan tr.grp td{border-top:0;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+.t-sx .plan .nm small{color:var(--ink2)}
+.t-sx .plan td.hl,.t-sx .plan th.hl{background:var(--hl)}
+.t-sx .plan tr.sum td.hl{background:#2c4321}
+.t-sx .composer{padding:7px 7px 7px 14px;background:var(--paper)}
+.t-sx .composer .lbl{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);white-space:nowrap;padding-right:12px;border-right:1px dashed var(--dash)}
+.t-sx .composer input::placeholder{color:var(--ink2)}
+.t-sx .composer .model{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.04em;color:var(--ink2)}
+.t-sx .composer .send{width:32px;height:32px;background:var(--ink);color:var(--paper);display:grid;place-items:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="eyebrow">Propositions de design · 13 novembre 2026</span>
+  <h1>Trois directions pour l'application de trésorerie</h1>
+  <p class="lead">Mêmes écrans, mêmes fonctions : seuls l'habillage, le nom et l'icône changent. Chaque direction est maquettée sur l'écran Trésorerie avec tes vrais chiffres. Passe la souris sur la courbe et clique sur les scénarios : les maquettes réagissent comme l'appli.</p>
+</header>
+
+<h2>Pourquoi l'écran actuel manque de classe</h2>
+<ul class="tight">
+  <li><strong>Des boîtes partout.</strong> Chaque bloc est une carte blanche cerclée d'un filet et d'une ombre : l'œil voit les cadres avant les chiffres. Tes propres références disent l'inverse (Alven, The Prompting Company, CTGT : des filets, jamais de cartes à ombre).</li>
+  <li><strong>Un indigo de série.</strong> Le <code>#615fff</code> est la couleur par défaut de mille tableaux de bord ; rien n'y dit Kaoly ni l'argent.</li>
+  <li><strong>Des chiffres en Menlo gras.</strong> Lisibles, mais ils font terminal, pas banque. Ce sont pourtant les héros de l'écran.</li>
+  <li><strong>Une hiérarchie qui crie.</strong> Titres en graisse 700 et quatorze tailles de police : tout se dispute l'attention.</li>
+  <li><strong>Un nom qui ne dit rien.</strong> « Kaoly » ne dit pas ce que fait l'appli et se confond avec Kaoly Cerveau et Kaoly Clients.</li>
+</ul>
+
+<h3>Ce qui ne bouge pas</h3>
+<p>La barre latérale et ses trois écrans, la barre de discussion en bas, la courbe alignée sur les colonnes du plan, les valeurs qu'on modifie d'un clic, le pointillé pour tout ce qui est estimé, « Annuler » écrit sur la ligne touchée. Les trois directions gardent exactement le même contenu ; seule la manière de le montrer change.</p>
+
+<h3>Le nom : « Kaoly » suivi d'un vrai mot</h3>
+<p>Le fichier s'appellera <code>Kaoly Vigie.app</code> (ou l'un des deux autres noms) : il se range à côté de Kaoly Cerveau et Kaoly Clients dans Applications et le Launchpad, et taper « Kaoly » dans Spotlight sort les trois. Dans la fenêtre et la barre des menus, on lit juste le mot : « Vigie ».</p>
+
+<!-- ======================= 1. VIGIE ======================= -->
+<h2 id="vigie">1. Vigie — ciel clair</h2>
+<div class="idrow">
+  <div class="big" data-icon="vg" data-px="168"></div>
+  <div>
+    <div class="name">Vigie<small>Kaoly Vigie.app</small></div>
+    <p class="small" style="max-width:40ch">La vigie, c'est le marin en haut du mât qui regarde loin devant. C'est ce que fait l'écran Trésorerie : « mois devant nous ».</p>
+  </div>
+</div>
+<div class="dock"><div class="d"><div class="ph"></div><span>Kaoly Cerveau</span></div><div class="d"><div class="ph"></div><span>Kaoly Clients</span></div><div class="d me"><div data-icon="vg" data-px="56"></div><span>Kaoly Vigie</span></div></div>
+
+<h3>Le parti pris</h3>
+<ul class="tight">
+  <li>Un ciel pâle descend du haut de la fenêtre et se fond dans un gris très froid : pas un seul cadre, la lumière fait les étages.</li>
+  <li>Encre bleu nuit pour le texte et le réel, vert sourd pour ce qui rentre, orange <em>seulement</em> pour une alerte (une facture en retard).</li>
+  <li>L'avenir incertain est fait de points qui s'éclaircissent au fil des mois : plus on regarde loin, moins c'est sûr.</li>
+  <li>Un seul objet flotte : la barre de discussion, en verre dépoli, parce que c'est l'action principale.</li>
+</ul>
+<div class="sw" data-sw='[["#14204a","Bleu nuit","texte, réel, bouton"],["#c9dfed","Ciel","haut de la fenêtre"],["#f6f7f9","Gris froid","fond"],["#167e6c","Vert sourd","ce qui rentre"],["#4575cd","Bleu point","scénarios, points"],["#d9622b","Orange","alertes seulement"]]'></div>
+<div class="type">
+  <div><span style="font:600 26px/1.1 Geist;letter-spacing:-.03em">Geist</span><p>Titres 600, chiffres 560 en chasse fixe, texte 400. Libre (OFL).</p></div>
+  <div><span style="font:400 13px/1.6 'Geist Mono';text-transform:uppercase;letter-spacing:.02em">Geist Mono · FIN JANV 27</span><p>Petits repères seulement : en-têtes de colonnes, axes, date.</p></div>
+</div>
+<div class="wide"><div class="mock" data-theme="vg"></div></div>
+<p class="small"><strong>Ce qui bouge :</strong> la courbe se dessine de gauche à droite à l'ouverture ; au survol d'un mois, une bande légère traverse la courbe <em>et</em> la colonne du plan, une bulle bleu nuit donne les soldes ; les points de l'avenir pâlissent avec la distance.<br><strong>Sources :</strong> Refero, Column (style principal : fond froid, encre marine, points en trame, un seul objet en verre) et l'écran Insights de Mercury (graphique sans cadre, bulle sombre) ; tes goûts, Altitude (le ciel).</p>
+
+<!-- ======================= 2. GRAND LIVRE ======================= -->
+<h2 id="grand-livre">2. Grand Livre — encre bleue</h2>
+<div class="idrow">
+  <div class="big" data-icon="gl" data-px="168"></div>
+  <div>
+    <div class="name">Grand Livre<small>Kaoly Grand Livre.app</small></div>
+    <p class="small" style="max-width:40ch">Le grand livre est le registre où le comptable reporte chaque mouvement. Le signe ± de l'icône dit tout : ce qui entre, ce qui sort.</p>
+  </div>
+</div>
+<div class="dock"><div class="d"><div class="ph"></div><span>Kaoly Cerveau</span></div><div class="d"><div class="ph"></div><span>Kaoly Clients</span></div><div class="d me"><div data-icon="gl" data-px="56"></div><span>Kaoly Grand Livre</span></div></div>
+
+<h3>Le parti pris</h3>
+<ul class="tight">
+  <li>Une seule encre, bleu stylo, sur un papier à peine chaud : texte, filets, icônes et courbes. Le rouge ne sert qu'aux montants négatifs et aux retards, comme dans un vrai registre.</li>
+  <li>Les montants sont composés dans un serif fin à chiffres alignés : c'est la touche de classe, et le seul endroit où il apparaît.</li>
+  <li>Tout en graisse normale : la hiérarchie vient de la taille, pas du gras. Le titre « Trésorerie » est grand et léger.</li>
+  <li>Le total est souligné deux fois, comme en comptabilité. Pas de boutons arrondis : des liens soulignés (« Envoyer »).</li>
+  <li>Les scénarios ne changent pas de couleur : ils changent de trait (plein, pointillé, tiret-point).</li>
+</ul>
+<div class="sw" data-sw='[["#1f47c8","Encre bleue","tout le texte, filets, courbes"],["#f7f5ee","Papier","fond"],["#c33a2c","Encre rouge","négatifs et retards seulement"],["rgba(31,71,200,.16)","Filet","séparations"]]'></div>
+<div class="type">
+  <div><span style="font:400 26px/1.1 'Instrument Sans';letter-spacing:-.02em">Instrument Sans</span><p>Tout le texte, en 400 ; 600 pour l'écran ouvert dans la barre latérale. Libre (OFL).</p></div>
+  <div><span style="font:300 30px/1 'Source Serif 4';font-variant-numeric:tabular-nums lining-nums">16 799 €</span><p>Source Serif 4, uniquement pour les montants. Libre (OFL).</p></div>
+</div>
+<div class="wide"><div class="mock" data-theme="gl"></div></div>
+<p class="small"><strong>Ce qui bouge :</strong> la courbe se trace à l'encre à l'ouverture ; au survol d'un mois, la colonne du plan se teinte et une étiquette de papier cerclée d'encre donne les soldes ; le scénario actif se souligne.<br><strong>Sources :</strong> Refero, Fidèle Éditions (style principal : encre bleue sur papier, graisse normale, angles droits, liens soulignés au lieu de boutons) et Plaid (chiffres en serif fin) ; tes goûts, The Prompting Company (tableaux à filets façon registre).</p>
+
+<!-- ======================= 3. RELEVÉ ======================= -->
+<h2 id="releve">3. Relevé — papier technique</h2>
+<div class="idrow">
+  <div class="big" data-icon="sx" data-px="168"></div>
+  <div>
+    <div class="name">Relevé<small>Kaoly Relevé.app</small></div>
+    <p class="small" style="max-width:40ch">Double sens : le relevé de compte, et le relevé topographique du géomètre. La courbe de trésorerie devient une carte gravée, annotée à la main.</p>
+  </div>
+</div>
+<div class="dock"><div class="d"><div class="ph"></div><span>Kaoly Cerveau</span></div><div class="d"><div class="ph"></div><span>Kaoly Clients</span></div><div class="d me"><div data-icon="sx" data-px="56"></div><span>Kaoly Relevé</span></div></div>
+
+<h3>Le parti pris</h3>
+<ul class="tight">
+  <li>Papier vert sauge et encre vert forêt, rien d'autre : pas de dégradé, pas d'ombre. La seule texture est la gravure en traits fins sous la courbe.</li>
+  <li>Des annotations en capitales à chasse fixe, reliées à la courbe par un trait : « aujourd'hui », « point bas ». L'écran se lit comme une fiche technique.</li>
+  <li>La rangée « En banque en fin de mois » passe en bandeau vert forêt plein : c'est le chiffre qu'on cherche, il se voit tout de suite.</li>
+  <li>Cadres en pointillé avec deux coins en équerre pour ce qui est actif (scénario choisi, barre de discussion) ; repères de coupe aux coins de la page.</li>
+  <li>Les rubriques de la barre latérale sont numérotées, l'écran ouvert est en négatif.</li>
+</ul>
+<div class="sw" data-sw='[["#17290f","Vert forêt","texte, réel, bandeau total"],["#eaf0df","Sauge","fond"],["#5b7c3f","Vert mousse","scénario, sources"],["#a8452a","Rouille","négatifs et retards seulement"],["#ffffff","Blanc","la bulle de survol seulement"]]'></div>
+<div class="type">
+  <div><span style="font:600 26px/1.1 'Schibsted Grotesk';letter-spacing:-.035em">Schibsted Grotesk</span><p>Grotesque dense, 600 pour titres et chiffres. Libre (OFL).</p></div>
+  <div><span style="font:400 12px/1.6 'IBM Plex Mono';text-transform:uppercase;letter-spacing:.08em">■ IBM Plex Mono · point bas</span><p>Étiquettes, annotations et montants du plan. Libre (OFL).</p></div>
+</div>
+<div class="wide"><div class="mock" data-theme="sx"></div></div>
+<p class="small"><strong>Ce qui bouge :</strong> la gravure se révèle de gauche à droite ; au survol d'un mois, une fiche blanche cerclée d'encre se pose sur la courbe et la colonne du plan se grise ; les annotations restent épinglées aux points clés.<br><strong>Sources :</strong> tes goûts, Spade (style principal : papier sauge, encre forêt, gravure, annotations mono, bandeaux sombres) et CTGT (micro-étiquettes ■) ; Refero, Antimetal (coins en équerre sur cadres pointillés, rubriques numérotées).</p>
+
+<!-- ======================= Comparatif ======================= -->
+<h2>Les trois côte à côte</h2>
+<div class="tablewrap"><table class="cmp">
+  <thead><tr><th></th><th>Vigie</th><th>Grand Livre</th><th>Relevé</th></tr></thead>
+  <tbody>
+    <tr><td>Impression</td><td>Une appli Mac aérienne, lumineuse</td><td>Un registre de maison sérieuse</td><td>Une fiche d'ingénieur, gravée</td></tr>
+    <tr><td>Lecture quotidienne</td><td>Très facile, couleurs franches pour les scénarios</td><td>Très calme ; scénarios distingués par le trait, demande un œil de plus</td><td>Facile, le total saute aux yeux ; plus chargée que les deux autres</td></tr>
+    <tr><td>Ce qu'on retient</td><td>Les points qui pâlissent dans l'avenir</td><td>Les chiffres en serif, le double soulignement</td><td>Les annotations reliées à la courbe</td></tr>
+    <tr><td>Proche de tes goûts</td><td>Altitude</td><td>The Prompting Company, Alven</td><td>Spade, CTGT</td></tr>
+    <tr><td>Risque</td><td>Le plus proche d'une appli « normale »</td><td>Peut paraître froide si on aime la couleur</td><td>La gravure peut lasser à la longue</td></tr>
+  </tbody>
+</table></div>
+
+<div class="verdict">
+  <h2>Ma recommandation</h2>
+  <p><strong>Grand Livre.</strong> C'est celle qui répond le plus directement à « ça manque de classe » : une seule encre, des montants composés comme dans un beau registre, le total souligné deux fois, et rien qui ne serve pas. C'est aussi la plus calme pour un écran que tu ouvres tous les jours.</p><p>Une idée de Relevé mérite d'être gardée quelle que soit la direction : les annotations reliées à la courbe (« aujourd'hui », « point bas »). Elles disent en un coup d'œil ce qu'on cherche ; je peux les reprendre à l'encre bleue dans Grand Livre. Si tu préfères plus de caractère, Relevé est la plus proche de Spade, ta première référence.</p>
+</div>
+
+<div class="callout warn unsure">
+  <p><strong>À vérifier sur la vraie appli :</strong> ces maquettes tournent dans le navigateur. Dans la fenêtre de l'appli (WebKit, le moteur de Safari), le flou de la barre de Vigie et le rendu des polices peuvent légèrement différer.</p>
+  <p>Ce n'est pas bloquant : je vérifierai sur captures de la vraie fenêtre après application. Les polices seront copiées dans le dépôt (licence libre) pour que l'appli marche hors ligne ; rien de tout cela ne coûte d'argent.</p>
+</div>
+
+<h2>Et ensuite</h2>
+<div class="step"><div class="w">1</div><div><h3>Tu choisis une direction</h3><p>Ou un mélange précis (« la courbe de Relevé avec l'encre de Grand Livre »), et le nom qui va avec.</p></div></div>
+<div class="step"><div class="w">2</div><div><h3>Je l'applique aux trois écrans</h3><p>Trésorerie, Clients et contrats, Dépenses, plus la recherche ⌘K et la barre de discussion. Mêmes fonctions, captures avant et après.</p></div></div>
+<div class="step"><div class="w">3</div><div><h3>L'icône et le nom dans le Dock</h3><p>L'icône devient un vrai fichier d'icône Mac, l'appli est renommée et remplace l'ancienne « Kaoly » dans Applications.</p></div></div>
+
+</div>
+
+<script>
+// ───── données réelles de l'écran Trésorerie (13 nov.) ─────
+const PAST = [[0,300],[.08,300],[.085,6000],[.09,300],[.4,300],[.42,0],[.6,0],[.605,700],[.61,0],[.655,3000],[.66,0],[.675,21000],[.685,14600],[.74,14600],[.75,14200],[.78,11200],[.8,15000],[.86,14800],[.88,18000],[.92,16200],[.95,18000],[1,16799]];
+const NOW = 16799;
+const SERIES = { classique: [19799,17546,18794,16541,17289,18036,18784], sf1: [19799,17546,19200,15000,10800,8500,6300], sf2: [19799,26500,29800,27100,33500,32700,31900] };
+const NAMES = { classique: "Classique", sf1: "Classic SF", sf2: "Medium SF" };
+const MONTHS = ["fin nov","déc","janv 27","févr","mars","avr","mai"];
+const MLONG = ["Fin novembre","Fin décembre","Fin janvier 2027","Fin février","Fin mars","Fin avril","Fin mai"];
+const VAR = [3000,-2252,1248,-2252,748,748,748];
+const ROWS = [
+  { t: "En banque en fin de mois", v: SERIES.classique, cls: "sum" },
+  { t: "Variation du mois", v: VAR, s: 1 },
+  { g: "Chaque mois" },
+  { t: "Entrées récurrentes", v: [null,2100,2100,2100,2100,2100,2100], s: 1 },
+  { t: "Dépenses habituelles", v: [null,-1352,-1352,-1352,-1352,-1352,-1352], s: 1 },
+  { t: "GoCardless, mensualités", sub: "6 en tout", v: [-3000,-3000,-3000,-3000,null,null,null], s: 1 },
+  { g: "Signé ou facturé" },
+  { t: "Cetic", sub: "F-2026-008, en retard", v: [6000,null,null,null,null,null,null], s: 1, est: 0 },
+  { t: "Arion", sub: "solde du contrat, vers le 31 janv.", v: [null,null,3500,null,null,null,null], s: 1, est: 2 },
+];
+const fmt = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+const eur = (n) => fmt.format(n).replace("-", "−");
+const sgn = (n) => (n > 0 ? "+" : "") + eur(n);
+
+// ───── géométrie : la courbe partage ses colonnes avec le plan ─────
+const W = 840, H = 214, L = 44, X0 = 300, CW = (W - X0) / 7, TOP = 14, BOT = H - 22, YMAX = 36000;
+const y = (v) => TOP + (1 - v / YMAX) * (BOT - TOP);
+const xp = (t) => L + t * (X0 - L);
+const pt = (i) => X0 + CW * (i + .5);
+
+const TH = {
+  vg: { brand: "Vigie", bg: "#f4f6f9", grid: "rgba(20,32,74,.10)", zero: "rgba(20,32,74,.28)", gdash: "3 4", band: "rgba(69,117,205,.10)", past: "#14204a", mark: "circle",
+        lines: { classique: ["#14204a","5 4",2], sf1: ["#4575cd","5 4",1.6], sf2: ["#bf5a82","5 4",1.6] } },
+  gl: { brand: "Grand Livre", bg: "#f7f5ee", grid: "rgba(31,71,200,.12)", zero: "rgba(31,71,200,.6)", gdash: "", band: "rgba(31,71,200,.06)", past: "#1f47c8", mark: "square",
+        lines: { classique: ["#1f47c8","6 4",1.6], sf1: ["#1f47c8","1.5 3.5",1.7], sf2: ["#1f47c8","12 3 2 3",1.4] } },
+  sx: { brand: "Relevé", bg: "#eaf0df", grid: "rgba(23,41,15,.2)", zero: "rgba(23,41,15,.65)", gdash: "1 3", band: "rgba(23,41,15,.07)", past: "#17290f", mark: "cross", ann: 1,
+        lines: { classique: ["#17290f","6 4",1.8], sf1: ["#5b7c3f","6 4",1.5], sf2: ["#8e9f62","2 3",1.7] } },
+};
+
+function defs(t) {
+  if (t === "vg") return `<linearGradient id="vg-past" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4575cd" stop-opacity=".24"/><stop offset="1" stop-color="#4575cd" stop-opacity="0"/></linearGradient>`;
+  if (t === "gl") return `<pattern id="gl-past" width="6" height="4" patternUnits="userSpaceOnUse"><line x1="0" y1="3.5" x2="6" y2="3.5" stroke="#1f47c8" stroke-opacity=".3" stroke-width=".8"/></pattern><pattern id="gl-fut" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="#1f47c8" stroke-opacity=".17" stroke-width="1"/></pattern>`;
+  return `<pattern id="sx-past" width="8" height="3.4" patternUnits="userSpaceOnUse"><line x1="0" y1="3" x2="8" y2="3" stroke="#17290f" stroke-opacity=".55" stroke-width=".7"/></pattern><pattern id="sx-fut" width="9" height="3.4" patternUnits="userSpaceOnUse"><line x1="0" y1="3" x2="5" y2="3" stroke="#17290f" stroke-opacity=".32" stroke-width=".7"/></pattern>`;
+}
+const lineAt = (pts, x) => { for (let i = 1; i < pts.length; i++) { const [x1, y1] = pts[i - 1], [x2, y2] = pts[i]; if (x <= x2) return y1 + (y2 - y1) * (x - x1) / (x2 - x1); } return pts.at(-1)[1]; };
+const mark = (kind, x, yy, c, bg) => kind === "circle" ? `<circle cx="${x}" cy="${yy}" r="3.2" fill="${bg}" stroke="${c}" stroke-width="1.6"/>`
+  : kind === "square" ? `<rect x="${x - 2.5}" y="${yy - 2.5}" width="5" height="5" fill="${c}"/>`
+  : `<path d="M${x - 3.5} ${yy}H${x + 3.5}M${x} ${yy - 3.5}V${yy + 3.5}" stroke="${c}" stroke-width="1.4"/>`;
+
+function drawChart(root, first) {
+  const t = root.dataset.theme, T = TH[t], svg = root.querySelector(".chart");
+  const on = [...root.querySelectorAll(".chips button.on")].map((b) => b.dataset.k);
+  let s = `<defs>${defs(t)}<clipPath id="${t}-rv"><rect class="${first ? "reveal" : ""}" x="0" y="0" width="${W}" height="${H}"/></clipPath></defs>`;
+  for (const v of [0, 10000, 20000, 30000]) s += `<line x1="${L}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="${v ? T.grid : T.zero}" ${v && T.gdash ? `stroke-dasharray="${T.gdash}"` : ""}/><text x="${L - 8}" y="${y(v) + 3.5}" text-anchor="end">${v ? v / 1000 + " k€" : "0"}</text>`;
+  [["juil", 0], ["août", .23], ["sept", .46], ["oct", .68]].forEach(([m, tt]) => s += `<text x="${xp(tt) + 3}" y="${H - 6}">${m}</text>`);
+  MONTHS.forEach((m, i) => s += `<line x1="${X0 + CW * i}" x2="${X0 + CW * i}" y1="${BOT}" y2="${BOT + 4}" stroke="${T.grid}"/>`);
+  s += `<rect class="band" x="${X0}" y="${TOP - 6}" width="${CW}" height="${BOT - TOP + 6}" fill="${T.band}" opacity="0"/>`;
+  s += `<g clip-path="url(#${t}-rv)">`;
+  // passé : marches réelles
+  let d = "";
+  PAST.forEach(([tt, v], i) => d += i ? `H${xp(tt).toFixed(1)}V${y(v).toFixed(1)}` : `M${xp(tt).toFixed(1)} ${y(v).toFixed(1)}`);
+  d += `H${X0}V${y(NOW).toFixed(1)}`;
+  s += `<path d="${d}V${y(0)}H${xp(0)}Z" fill="url(#${t}-past)" stroke="none"/>`;
+  // avenir incertain sous le classique
+  const pts = [[X0, y(NOW)], ...SERIES.classique.map((v, i) => [pt(i), y(v)])];
+  if (t === "vg") {
+    for (let x = X0 + 4; x <= pt(6); x += 7) { const ly = lineAt(pts, x), f = (x - X0) / (pt(6) - X0);
+      for (let yy = BOT - 3; yy > ly + 4; yy -= 7) { const k = 1 - (yy - ly) / (BOT - ly); s += `<circle cx="${x}" cy="${yy}" r="${((.45 + 1.35 * k) * (1 - .5 * f)).toFixed(2)}" fill="#4575cd" fill-opacity="${(.5 - .28 * f).toFixed(2)}"/>`; } }
+  } else s += `<path d="M${pts.map((p) => p.join(" ")).join("L")}V${y(0)}H${X0}Z" fill="url(#${t}-fut)"/>`;
+  s += `<path d="${d}" fill="none" stroke="${T.past}" stroke-width="1.6" stroke-linejoin="round"/>`;
+  for (const k of ["sf2", "sf1", "classique"]) {
+    if (!on.includes(k)) continue;
+    const [c, dash, w] = T.lines[k], p = [[X0, y(NOW)], ...SERIES[k].map((v, i) => [pt(i), y(v)])];
+    s += `<path d="M${p.map((q) => q.join(" ")).join("L")}" fill="none" stroke="${c}" stroke-width="${w}" stroke-dasharray="${dash}" stroke-linejoin="round"/>`;
+    p.slice(1).forEach(([x, yy]) => s += mark(T.mark, x, yy, c, T.bg));
+  }
+  s += `</g>`;
+  // aujourd'hui
+  s += `<line x1="${X0}" x2="${X0}" y1="${TOP - 6}" y2="${BOT}" stroke="${T.past}" stroke-opacity=".35" ${T.gdash ? `stroke-dasharray="2 3"` : ""}/>`;
+  s += t === "sx" ? "" : `<circle cx="${X0}" cy="${y(NOW)}" r="3.6" fill="${T.past}"/><text x="${X0 - 6}" y="${TOP + 2}" text-anchor="end">aujourd'hui</text>`;
+  if (T.ann) {
+    const box = (x, yy, txt, anchor) => { const w = txt.length * 6.1 + 14, bx = anchor === "end" ? x - w : anchor === "mid" ? x - w / 2 : x;
+      return `<g class="ann"><rect x="${bx}" y="${yy - 11}" width="${w}" height="17" fill="#eaf0df" stroke="#17290f" stroke-width=".8"/><text x="${bx + 7}" y="${yy + 1}">${txt}</text></g>`; };
+    s += `<circle cx="${X0}" cy="${y(NOW)}" r="3.4" fill="#17290f"/><line x1="${X0}" y1="${y(NOW)}" x2="${X0 - 26}" y2="${TOP + 10}" stroke="#17290f" stroke-width=".8"/>` + box(X0 - 26, TOP + 10, "AUJOURD'HUI · 16 799 €", "end");
+    if (on.includes("classique")) s += `<line x1="${pt(3)}" y1="${y(16541) + 5}" x2="${pt(3)}" y2="${BOT - 22}" stroke="#17290f" stroke-width=".8"/>` + box(pt(3), BOT - 16, "POINT BAS · FÉVR. · 16 541 €", "mid");
+  }
+  for (let i = 0; i < 7; i++) s += `<rect class="hit" data-i="${i}" x="${X0 + CW * i}" y="0" width="${CW}" height="${H}"/>`;
+  svg.innerHTML = s;
+}
+
+function hover(root, i) {
+  const t = root.dataset.theme, T = TH[t], band = root.querySelector(".band"), tip = root.querySelector(".tip");
+  root.querySelectorAll(".hl").forEach((e) => e.classList.remove("hl"));
+  if (i == null) { band.setAttribute("opacity", 0); tip.hidden = true; return; }
+  band.setAttribute("x", X0 + CW * i); band.setAttribute("opacity", 1);
+  root.querySelectorAll(`[data-c="${i}"]`).forEach((e) => e.classList.add("hl"));
+  const on = [...root.querySelectorAll(".chips button.on")].map((b) => b.dataset.k);
+  tip.innerHTML = `<b>${MLONG[i]}</b>` + ["classique", "sf1", "sf2"].filter((k) => on.includes(k)).map((k) => `<div class="r">${t === "gl" ? lineSwatch(t, k) : `<i style="border-color:${T.lines[k][0]}"></i>`}${NAMES[k]}<span>${eur(SERIES[k][i])}</span></div>`).join("") + `<div class="r vv"><i style="border:0"></i>Variation<span>${sgn(VAR[i])}</span></div>`;
+  tip.hidden = false;
+  const right = i >= 4;
+  tip.style.left = (right ? pt(i) - CW / 2 - 10 : pt(i) + CW / 2 + 10) + "px";
+  tip.style.transform = right ? "translateX(-100%)" : "none";
+}
+
+const ICON = {
+  tresorerie: '<path d="M3 17l5-5 4 3 8-9"/><path d="M15 6h5v5"/>',
+  clients: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>',
+  depenses: '<path d="M4 9a8 8 0 0 1 14-3l2 2"/><path d="M20 4v4h-4"/><path d="M20 15a8 8 0 0 1-14 3l-2-2"/><path d="M4 20v-4h4"/>',
+};
+const nv = (n, k, label, extra = "", on = "") => `<a class="${on}" data-n="${n}"><svg viewBox="0 0 24 24">${ICON[k]}</svg>${label}${extra}</a>`;
+const lineSwatch = (t, k) => { const [c, dash, w] = TH[t].lines[k]; return `<svg viewBox="0 0 22 6"><line x1="0" y1="3" x2="22" y2="3" stroke="${c}" stroke-width="${w}" stroke-dasharray="${dash}"/></svg>`; };
+
+function mockHTML(t) {
+  const T = TH[t];
+  const chip = (k) => `<button class="on" data-k="${k}">${t === "gl" ? lineSwatch(t, k) : `<i style="border-color:${T.lines[k][0]}"></i>`}${NAMES[k]} <b>plus de 24 mois</b></button>`;
+  const head = `<tr><th></th>${MONTHS.map((m, i) => `<th data-c="${i}">${m}</th>`).join("")}</tr>`;
+  const rows = ROWS.map((r) => r.g ? `<tr class="grp"><td colspan="8">${r.g}</td></tr>`
+    : `<tr class="${r.cls ?? ""}"><td><div class="nm"><span>${r.t}</span>${r.sub ? `<small>${r.sub}</small>` : ""}</div></td>${r.v.map((v, i) => `<td class="n${r.est === i ? " est" : ""}" data-c="${i}">${v == null ? "·" : r.s ? sgn(v) : eur(v)}</td>`).join("")}</tr>`).join("");
+  return `<div class="win t-${t}" data-theme="${t}">
+  <div class="lights"><i></i><i></i><i></i></div>
+  <aside>
+    <div class="brand">${icon(t, 22)}<span>${T.brand}</span></div>
+    <div class="find"><span>${t === "sx" ? "Chercher" : "Rechercher"}</span><kbd>⌘K</kbd></div>
+    <nav>${nv("01", "tresorerie", "Trésorerie", "", "on")}${nv("02", "clients", "Clients et contrats", "<b>1</b>")}${nv("03", "depenses", "Dépenses")}</nav>
+    <div class="src">
+      <div><i></i>Qonto<small>il y a 17 min · mettre à jour</small></div>
+      <div><i></i>AWS<small>il y a 15 h</small></div>
+      <div><i></i>Claude Code<small>abonnement Max</small></div>
+    </div>
+  </aside>
+  <main>
+    <span class="crop tl"></span><span class="crop tr"></span>
+    <header><h1>Trésorerie</h1><span class="date">13 novembre 2026</span></header>
+    <div class="kpis">
+      <div class="k big"><span class="l">En banque</span><span class="v">${eur(16799)}</span></div>
+      <div class="k"><span class="l">Mois devant nous</span><span class="v">plus de 24 <small>mois</small></span><span class="s">sans rien de nouveau</span></div>
+      <div class="k"><span class="l">Chaque mois</span><span class="v neg">${eur(-2252)}</span><span class="s">${sgn(748)} dès mars</span></div>
+      <div class="k"><span class="l">À encaisser</span><span class="v">${eur(6000)}</span><span class="s">Cetic, <em class="late">en retard de 8 jours</em></span></div>
+    </div>
+    <div class="chips">${chip("classique")}${chip("sf1")}${chip("sf2")}<span class="add">${t === "sx" ? "+ Et si…" : "Et si… →"}</span></div>
+    <div class="chartwrap"><svg class="chart" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"></svg><div class="tip" hidden></div></div>
+    <table class="plan"><colgroup><col style="width:${X0}px">${MONTHS.map(() => `<col style="width:${CW}px">`).join("")}</colgroup>${head}${rows}</table>
+  </main>
+  <div class="fade"></div>
+  <form class="composer" onsubmit="return false"><span class="lbl">${t === "sx" ? "Demander" : "Écrire à Claude"}</span><input placeholder="Une ligne à ajouter au plan, ou « et si Cetic ne payait jamais ? »"><span class="model">Fable 5.2 ⌄</span><button class="send" type="button">${t === "gl" ? "→" : "↑"}</button></form>
+</div>`;
+}
+
+// ───── icônes d'application (grille macOS : forme de 824 px dans 1024) ─────
+let uid = 0;
+function icon(t, px) {
+  const id = t + (uid++), shape = `<rect x="100" y="100" width="824" height="824" rx="185"/>`;
+  let body = "";
+  if (t === "vg") {
+    let dots = "";
+    const cx = 512, cy = 642, R = 300;
+    for (let gx = cx - R; gx <= cx + R; gx += 30) for (let gy = cy - R; gy <= cy + 20; gy += 30) {
+      const dd = Math.hypot(gx - cx, gy - cy), r = 13.5 * Math.max(0, Math.min(1, (1 - dd / R) * 2));
+      if (r > .8) dots += `<circle cx="${gx}" cy="${gy}" r="${r.toFixed(1)}"/>`;
+    }
+    body = `<defs><linearGradient id="g${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7eaed0"/><stop offset=".55" stop-color="#cfe3ee"/><stop offset="1" stop-color="#eef4f8"/></linearGradient><clipPath id="c${id}">${shape}</clipPath></defs>
+      <g clip-path="url(#c${id})"><rect width="1024" height="1024" fill="url(#g${id})"/><g fill="#14204a">${dots}</g><ellipse cx="512" cy="1520" rx="1180" ry="860" fill="#f6f8fa"/></g>`;
+  } else if (t === "gl") {
+    body = `<rect x="100" y="100" width="824" height="824" rx="185" fill="#f5f2e9"/><g fill="#1f47c8"><rect x="322" y="404" width="380" height="68"/><rect x="478" y="248" width="68" height="380"/><rect x="322" y="704" width="380" height="68"/></g>`;
+  } else {
+    let rings = "";
+    for (let k = 0; k < 7; k++) {
+      const R = 62 + k * 50; let d = "";
+      for (let a = 0; a <= Math.PI * 2 + .01; a += .06) { const r = R * (1 + .075 * Math.sin(3 * a + k * .7) + .045 * Math.sin(5 * a - k * .4) + .03 * Math.sin(2 * a + 1)); d += (d ? "L" : "M") + (540 + r * Math.cos(a)).toFixed(1) + " " + (500 + r * Math.sin(a)).toFixed(1); }
+      rings += `<path d="${d}Z" stroke-width="${k === 3 ? 13 : 6.5}"/>`;
+    }
+    const crop = (x, yy, sx, sy) => `<path d="M${x} ${yy + sy * 64}V${yy}H${x + sx * 64}"/>`;
+    body = `<defs><clipPath id="c${id}">${shape}</clipPath></defs><g clip-path="url(#c${id})"><rect width="1024" height="1024" fill="#e5ecd8"/><g fill="none" stroke="#17290f">${rings}</g><circle cx="540" cy="500" r="17" fill="#17290f"/><g fill="none" stroke="#17290f" stroke-width="9">${crop(196, 196, 1, 1)}${crop(828, 196, -1, 1)}${crop(196, 828, 1, -1)}${crop(828, 828, -1, -1)}</g></g>`;
+  }
+  return `<svg width="${px}" height="${px}" viewBox="${px < 40 ? "100 100 824 824" : "0 0 1024 1024"}" aria-hidden="true">${body}</svg>`;
+}
+
+// ───── montage ─────
+document.querySelectorAll("[data-icon]").forEach((e) => e.innerHTML = icon(e.dataset.icon, +e.dataset.px));
+document.querySelectorAll("[data-sw]").forEach((e) => e.innerHTML = JSON.parse(e.dataset.sw).map(([c, n, r]) => `<div><i style="background:${c}"></i><b>${n}</b>${r}<br><code>${c}</code></div>`).join(""));
+document.querySelectorAll(".mock").forEach((m) => {
+  m.innerHTML = mockHTML(m.dataset.theme);
+  const root = m.firstElementChild;
+  drawChart(root, true);
+  root.querySelector(".chart").addEventListener("mousemove", (e) => { const i = e.target.dataset?.i; if (i != null) hover(root, +i); });
+  root.querySelector(".chart").addEventListener("mouseleave", () => hover(root, null));
+  root.querySelectorAll(".plan td[data-c], .plan th[data-c]").forEach((td) => td.addEventListener("mouseenter", () => hover(root, +td.dataset.c)));
+  root.querySelector(".plan").addEventListener("mouseleave", () => hover(root, null));
+  root.querySelectorAll(".chips button").forEach((b) => b.addEventListener("click", () => { if (b.dataset.k === "classique") return; b.classList.toggle("on"); drawChart(root, false); }));
+});
+if (location.hash === "#survol") document.querySelectorAll(".win").forEach((r) => hover(r, 2)); // ponytail : sert aux captures de contrôle
+</script>
+</body>
+</html>

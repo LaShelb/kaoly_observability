@@ -1,0 +1,1081 @@
+<!doctype html>
+<html lang="fr">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vigie</title>
+<style>
+  /* Direction « Vigie » : un ciel pâle descend du haut de la fenêtre, aucun cadre, la lumière fait les étages.
+     Bleu nuit pour le texte et le réel, vert sourd pour ce qui rentre, orange seulement pour une alerte, une couleur par scénario.
+     L'avenir incertain est une trame de points qui pâlit ; un seul objet flotte, en verre : la barre de discussion.
+     Rien n'a de cadre tant qu'on ne le modifie pas : on clique sur une valeur pour la changer. */
+  @font-face { font-family: "Geist"; src: url(/fonts/geist.woff2) format("woff2"); font-weight: 100 900; font-display: swap; }
+  @font-face { font-family: "Geist Mono"; src: url(/fonts/geist-mono.woff2) format("woff2"); font-weight: 100 900; font-display: swap; }
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --ink: #14204a; --soft: #3b4566; --muted: #7c7f88;
+    --rule: rgba(20,32,74,.09); --rule-strong: rgba(20,32,74,.16); --panel: rgba(20,32,74,.04);
+    --blue: #4575cd; --blue-soft: #d8e4f6; --green: #167e6c; --red: #d9622b; /* --red : l'orange des alertes */
+    --sky: linear-gradient(180deg, #c9dfed 0, #e3eef5 190px, #f2f5f8 380px, #f6f7f9 560px);
+    --plate: rgba(255,255,255,.72); --plate-edge: inset 0 0 0 1px #fff, 0 1px 2px rgba(20,32,74,.07);
+    --glass: rgba(255,255,255,.78); --glass-shadow: 0 24px 48px -16px rgba(30,30,44,.28), inset 0 0 0 1px #fff, 0 0 0 1px rgba(20,32,74,.06);
+    --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --display: "Geist", -apple-system, "Helvetica Neue", sans-serif; --num: var(--display);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100vh; overflow: hidden; background: var(--bg); color: var(--ink); }
+  body { background: var(--sky); }
+  body { font: 14px/1.5 "Geist", -apple-system, "SF Pro Text", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; display: flex; }
+  button, input, select { font: inherit; color: inherit; }
+  .num, td.n, .fig .v, .amt { font-family: var(--num); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .pos { color: var(--green); } .neg { color: var(--red); } .dim { color: var(--muted); }
+
+  /* barre latérale */
+  aside { width: 216px; flex: none; background: transparent; display: flex; flex-direction: column; padding: 18px 12px 14px; height: 100vh; }
+  .brand { display: flex; align-items: center; gap: 9px; padding: 4px 8px 14px; font-weight: 600; font-size: 15px; letter-spacing: -0.02em; }
+  .brand svg { width: 24px; height: 24px; flex: none; filter: drop-shadow(0 1px 1.5px rgba(20,32,74,.25)); }
+  .find { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 9px; margin-bottom: 12px; border: 0; box-shadow: 0 0 0 1px rgba(87,90,100,.12); border-radius: 8px; background: rgba(255,255,255,.5); color: var(--muted); cursor: pointer; text-align: left; }
+  .find kbd { margin-left: auto; font: 11px var(--mono); color: var(--muted); }
+  .find svg, nav svg, .hist svg { width: 17px; height: 17px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+  nav a { display: flex; align-items: center; gap: 10px; padding: 7px 9px; border-radius: 8px; color: rgba(20,32,74,.62); font-weight: 500; font-size: 13.5px; text-decoration: none; margin-bottom: 2px; }
+  nav a:hover { background: rgba(255,255,255,.35); }
+  nav a.on { background: var(--plate); color: var(--ink); box-shadow: var(--plate-edge); }
+  nav .count { margin-left: auto; font-size: 12px; color: var(--muted); font-weight: 400; }
+  nav .count.neg { color: var(--red); font-weight: 600; }
+  .sources { margin-top: auto; font-size: 12.5px; color: var(--soft); }
+  .source { display: flex; align-items: flex-start; gap: 8px; padding: 6px 8px; }
+  .source small { display: block; color: var(--muted); font-size: 11.5px; }
+  .source select { display: block; width: 100%; max-width: none; margin: 1px 0 0 -6px; font-size: 12px; color: var(--soft); text-overflow: ellipsis; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--rule-strong); flex: none; margin-top: 6px; }
+  .dot.ok { background: var(--green); } .dot.bad { background: var(--red); }
+  .link { background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; color: var(--soft); font-size: 12px; }
+
+  /* contenu */
+  main { flex: 1; min-width: 0; height: 100vh; overflow-y: auto; padding: 32px 44px 150px; }
+  .page { max-width: 1120px; margin: 0 auto; }
+  h1 { font: 600 28px/1.1 var(--display); letter-spacing: -0.03em; margin: 0 0 22px; }
+  .card { margin-bottom: 26px; } /* plus de boîte : un bloc, c'est un titre, un compteur et des rangées à filet */
+  .card > header { display: flex; align-items: center; gap: 10px; padding: 0 0 4px; min-height: 36px; }
+  .card > header h2 { font: 600 15px/1.3 var(--display); letter-spacing: -0.02em; margin: 0; }
+  .card > header .count { color: var(--muted); font-size: 13px; }
+  .card > header .right { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .card > .body { padding: 10px 0 14px; }
+  .hero { display: grid; grid-auto-flow: column; grid-template-rows: auto auto auto; grid-template-columns: auto; grid-auto-columns: minmax(0, 1fr); column-gap: 28px; padding: 2px 0 22px; margin-top: -6px; }
+  .hero.eq { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hero .fig { display: contents; }
+  .hero .k { align-self: end; } .hero .v { align-self: baseline; } .hero .s { align-self: start; }
+  .nw { white-space: nowrap; }
+  .fig .k { color: rgba(20,32,74,.62); font-size: 12.5px; }
+  .fig .v { font-size: 23px; font-weight: 500; letter-spacing: -0.025em; line-height: 1.35; white-space: nowrap; }
+  .fig.big .v { font-size: 46px; font-weight: 560; letter-spacing: -0.04em; line-height: 1.08; }
+  .fig .v small { font: 400 14px var(--display); letter-spacing: 0; color: rgba(20,32,74,.62); }
+  .fig .s { color: var(--muted); font-size: 12px; }
+
+  .est { text-decoration: underline dashed; text-decoration-color: var(--muted); text-underline-offset: 3px; }
+  .toggle { cursor: pointer; } .toggle:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .zone { margin: -8px 0 22px; }
+  .zone .form { margin-top: 10px; }
+  .form .fl { display: flex; align-items: baseline; gap: 8px; color: var(--muted); font-size: 13px; min-width: 0; }
+  .form .fl input { flex: 1; font-size: 14px; color: var(--ink); }
+  .flat th:first-child, .flat td:first-child { padding-left: 0; } .flat th:last-child, .flat td:last-child { padding-right: 0; }
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px 40px; margin-top: 14px; }
+  .pair h3, h2.sec { margin: 0; }
+  .pair h3 { font: 400 10.5px var(--mono); text-transform: uppercase; letter-spacing: .02em; color: var(--muted); padding: 4px 0; }
+  h2.sec { font: 600 15px/1.3 var(--display); letter-spacing: -0.02em; margin: 26px 0 4px; }
+  .sechead { display: flex; align-items: center; gap: 10px; margin: 26px 0 4px; } .sechead h2.sec { margin: 0; } .sechead .count { color: var(--muted); font-size: 13px; } .sechead .search { margin-left: auto; }
+  table.rec tr.grp td { border-top: 0; padding: 14px 0 3px 0; color: var(--muted); font: 400 10.5px var(--mono); text-transform: uppercase; }
+  /* Dépenses : un seul tableau, les mois en colonnes */
+  table.sp { table-layout: fixed; }
+  .sp col.m { width: 9.2%; } .sp col.a { width: 11%; } .sp col.s { width: 10.5%; }
+  .sp th, .sp td { padding-right: 7px; } .sp th:last-child, .sp td:last-child { padding-right: 12px; }
+  .sp th { padding-top: 10px; padding-bottom: 8px; } .sp td { padding-top: 7px; padding-bottom: 7px; }
+  .sp .cur { color: var(--muted); }
+  .sp th .search { border: 0; box-shadow: none; background: none; padding: 0; width: 100%; } .sp th .search input { width: 100%; min-width: 0; font: 400 13.5px var(--display); letter-spacing: 0; }
+  .sp tr.sum td { background: var(--plate); border-top: 0; font-weight: 560; } .sp tr.sum td.name { font-family: var(--display); }
+  .sp tr.sum td:first-child, .plan tr.sum td:first-child { border-radius: 8px 0 0 8px; padding-left: 12px; } .sp tr.sum td:last-child, .plan tr.sum td:last-child { border-radius: 0 8px 8px 0; }
+  .sp tr.g td { border-top: 1px solid var(--rule); padding-top: 14px; padding-bottom: 5px; font-weight: 600; font-size: 13.5px; }
+  .sp tr.eng td { font-weight: 600; } .sp tr.eng .ex, .sp tr.eng .ex * { font-weight: 400; }
+  .sp tr.g td.n { font-size: 13.5px; } .sp tr.g .count { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 4px; }
+  .sp td.mut { color: var(--muted); font: 400 12.5px var(--display); letter-spacing: 0; }
+  .sp tr:not(.g):not(.sum) td { border-top: 0; }
+  .sp tr:not(.g):not(.sum):hover td { background: rgba(255,255,255,.6); }
+  .sp .nm { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+  .sp .vn { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+  .sp .ex { flex: none; color: var(--muted); font: 400 12.5px var(--display); letter-spacing: 0; white-space: nowrap; display: inline-flex; gap: 8px; }
+  .sp .ex:empty { display: none; }
+  .sp .ex .exc { display: none; } .sp tr:hover .ex .exc, .sp tr:focus-within .ex .exc { display: inline; }
+  .sp .ex .ed { margin: -2px 0; } /* la marge négative absorbe le padding : la ligne ne grandit pas quand un champ vide apparaît au survol */ .sp .ex .ed.empty { display: none; } .sp tr:hover .ex .ed.empty, .sp tr:focus-within .ex .ed.empty { display: inline; }
+  tr:focus-within .ed.empty { color: var(--muted); }
+  th.est { text-decoration: underline dashed; text-decoration-color: var(--muted); text-underline-offset: 3px; }
+  table.alerts td { padding-top: 12px; padding-bottom: 12px; }
+
+  /* tableaux : partout où il y avait des listes */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font: 400 10.5px var(--mono); text-transform: uppercase; letter-spacing: .02em; color: var(--muted); padding: 8px 14px 8px 0; white-space: nowrap; }
+  td { padding: 10px 14px 10px 0; border-top: 1px solid var(--rule); vertical-align: middle; }
+  th:first-child, td:first-child { padding-left: 0; } th:last-child, td:last-child { padding-right: 0; }
+  td.n, th.n { text-align: right; white-space: nowrap; }
+  td.name { font-weight: 500; }
+  td .sub { display: block; color: var(--muted); font: 400 12.5px var(--display); letter-spacing: 0; }
+  tr.dimrow td { color: var(--muted); }
+  tr.crow { cursor: pointer; } tr.crow:hover td { background: rgba(255,255,255,.6); }
+  .chev { display: inline-block; width: 16px; margin-right: 6px; color: var(--muted); font-size: 17px; line-height: 1; transition: transform .12s; text-align: center; }
+  .chev.open { transform: rotate(90deg); } .chev:focus-visible { outline: 2px solid var(--blue); border-radius: 4px; }
+  table.clients { table-layout: fixed; } table.clients td.n .sub { white-space: normal; }
+  tr.sub td { border-top: 0; padding-top: 5px; padding-bottom: 5px; vertical-align: top; font-size: 13.5px; }
+  tr.sub td:first-child { padding-left: 22px; } tr.sub.last td { padding-bottom: 14px; }
+  tr.sub .x.gone { margin-left: 4px; color: var(--muted); } tr.sub .x.gone:hover { color: var(--ink); }
+  tr.sub .rev { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .grp-end { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; flex-wrap: nowrap; } .grp-end .dim { color: var(--muted); font-size: 13px; }
+  tr.sub .ask-rev { opacity: 0; font-family: var(--display); text-decoration: none; letter-spacing: 0; } tr.sub .ask-yn { display: block; white-space: normal; text-align: right; line-height: 1.5; font: 400 12px var(--display); color: var(--muted); letter-spacing: 0; } tr.sub .ask-yn .link { text-decoration: none; color: var(--ink); font-weight: 550; } tr.sub .ask-rev:hover { color: var(--ink); } tr.sub .ask-rev.on { opacity: 1; color: var(--muted); } tr.sub:hover .ask-rev, tr.sub .ask-rev:focus-visible { opacity: 1; }
+  tr.sub .rev .switch:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  tr.flash td { animation: flashrow 1.8s ease-out; }
+  @keyframes flashrow { from { background: rgba(69,117,205,.2); } to { background: transparent; } }
+  .scroll { overflow-x: auto; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 6px; font: 400 12px var(--display); letter-spacing: 0; background: rgba(20,32,74,.06); color: var(--soft); white-space: nowrap; }
+  .tag.late { background: #fbece3; color: var(--red); } .tag.paid { background: #e3f1ee; color: var(--green); }
+  .tag.maybe { background: none; border: 1px dashed var(--rule-strong); color: var(--muted); }
+  .empty { padding: 14px 0 18px; color: var(--muted); font-size: 13px; }
+  .panel { background: var(--plate); box-shadow: var(--plate-edge); border-radius: 10px; padding: 14px 18px; margin-bottom: 18px; }
+  .panel.alert { background: #fbece3; box-shadow: none; color: #a8481c; }
+  .panel p { margin: 0 0 12px; color: var(--soft); }
+  code { font: 12.5px var(--mono); background: var(--panel); padding: 1px 5px; border-radius: 4px; }
+
+  /* valeurs modifiables : rien autour tant qu'on n'y touche pas */
+  .ed { cursor: pointer; border-radius: 6px; padding: 2px 5px; margin: -2px -5px; }
+  .ed:hover, .ed:focus { background: var(--panel); outline: 0; }
+  .ed.empty { color: transparent; } tr:hover .ed.empty, .ed.empty:focus { color: var(--muted); }
+  input.live, select.live { padding: 3px 6px; margin: -4px -6px; border: 1px solid var(--blue); border-radius: 7px; background: var(--card); outline: 0; max-width: 150px; }
+  input.live[type=number] { width: 96px; text-align: right; font-family: var(--mono); letter-spacing: -0.03em; }
+  select { appearance: none; -webkit-appearance: none; border: 0; border-radius: 8px; padding: 4px 22px 4px 6px; max-width: 170px; cursor: pointer; color: var(--ink);
+    background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238a8a8a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 7px center; }
+  select:hover, select:focus { background-color: var(--panel); outline: 0; }
+  .switch { appearance: none; width: 30px; height: 18px; border-radius: 18px; background: var(--rule-strong); position: relative; cursor: pointer; vertical-align: middle; margin: 0; flex: none; }
+  .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: left .12s; }
+  .switch:checked { background: var(--ink); } .switch:checked::after { left: 14px; }
+  .btn { padding: 6px 12px; border: 0; border-radius: 8px; background: rgba(255,255,255,.55); box-shadow: 0 0 0 1px rgba(87,90,100,.14); cursor: pointer; white-space: nowrap; font-weight: 500; font-size: 13px; }
+  .btn:hover { background: #fff; box-shadow: 0 1px 1px rgba(0,0,0,.1), 0 0 0 1px rgba(87,90,100,.2); }
+  .btn.dark, .btn.dark:hover { background: var(--ink); color: #fff; box-shadow: 0 0 0 1px var(--ink), 0 2px 4px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.12); }
+  .btn[disabled] { opacity: .45; cursor: default; }
+  .x { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 17px; line-height: 1; padding: 2px 5px; border-radius: 6px; }
+  .x:hover { background: var(--panel); color: var(--ink); }
+  .form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .form input { padding: 7px 10px; border: 1px solid var(--rule-strong); border-radius: 8px; background: rgba(255,255,255,.7); min-width: 0; }
+  .form.bare input, .form.bare select { border: 0; border-bottom: 1px solid var(--rule-strong); border-radius: 0; background-color: transparent; padding: 5px 2px; }
+  .form.bare select { padding-right: 22px; } .form.bare input.bad, .form.bare input.bad:focus { border-bottom-color: var(--red); }
+  .form.bare input:focus, .form.bare select:focus { outline: 0; border-bottom-color: var(--blue); }
+  #k-name { flex: 1 1 220px; min-width: 200px; }
+  .form select { font-weight: 550; padding: 7px 24px 7px 8px; }
+  .search { display: flex; align-items: center; gap: 7px; padding: 5px 10px; border: 0; box-shadow: 0 0 0 1px rgba(87,90,100,.12); background: rgba(255,255,255,.5); border-radius: 8px; color: var(--muted); }
+  .search input { border: 0; outline: 0; background: none; width: 190px; padding: 0; }
+  .search svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; }
+  .seg { display: inline-flex; gap: 2px; padding: 3px; background: rgba(255,255,255,.45); box-shadow: 0 0 0 1px rgba(87,90,100,.12); border-radius: 10px; margin-bottom: 18px; }
+  .seg button { border: 0; background: none; padding: 6px 14px; border-radius: 8px; cursor: pointer; color: rgba(20,32,74,.62); font-weight: 500; }
+  .seg button.on { background: #fff; color: var(--ink); box-shadow: 0 0 0 1px rgba(20,32,74,.1), 0 1px 3px rgba(20,32,74,.08); }
+
+  /* la courbe et son panneau de détail */
+  .lines { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 4px; }
+  .line { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 11px; border-radius: 8px; background: rgba(255,255,255,.45); box-shadow: 0 0 0 1px rgba(87,90,100,.12); color: rgba(20,32,74,.62); cursor: pointer; font-size: 13px; }
+  .line:hover { background: rgba(255,255,255,.75); } .line.on { background: #fff; color: var(--ink); box-shadow: 0 0 0 1px rgba(20,32,74,.12), 0 1px 3px rgba(20,32,74,.08); }
+  .line i { width: 12px; height: 0; border-top: 2px dashed currentColor; }
+  .line b { font: 500 12px var(--num); color: var(--muted); }
+  .explore { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(280px, 1fr); }
+  .explore .plot { padding: 8px 6px 4px 14px; }
+  .explore .detail { border-left: 1px solid var(--rule); padding: 14px 0 6px; max-height: 372px; overflow-y: auto; }
+  .detail h3 { font: 600 16px var(--display); letter-spacing: -0.02em; margin: 0; padding: 0 20px; display: flex; gap: 8px; align-items: center; }
+  .detail .total { padding: 2px 20px 10px; }
+  .detail .total .v { font: 600 26px var(--mono); letter-spacing: -0.04em; }
+  .detail .total .s { color: var(--muted); font-size: 12.5px; }
+  .detail td { padding: 7px 10px 7px 0; font-size: 13.5px; }
+  .detail tr.grp td { border-top: 0; padding: 12px 0 3px 20px; color: var(--muted); font-size: 12px; }
+  .detail p { margin: 0; padding: 0 20px 8px; color: var(--soft); font-size: 13px; }
+  .detail .acts { padding: 10px 20px 8px; display: flex; gap: 8px; }
+  .plan td, .plan th { padding-top: 8px; padding-bottom: 8px; }
+  .plan tr.grp td { border-top: 0; padding: 16px 0 4px 0; color: var(--muted); font: 400 10.5px var(--mono); text-transform: uppercase; letter-spacing: .02em; }
+  .plan tr.hyp td.name { font-weight: 500; }
+  .plan .nm { display: flex; align-items: center; } .plan .nm .lb { flex: 1; min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  .plan col.m { width: 10.3%; } @media (min-width: 1101px) { .plan col.m { width: 9%; } }
+  .plan tr.grp td.keep { text-align: right; white-space: nowrap; padding: 16px 14px 4px 0; font: 400 12px var(--display); text-transform: none; letter-spacing: 0; } .plan tr.grp td.keep .link { color: var(--muted); font-size: 12px; } .plan tr.grp td.keep .link:hover { color: var(--ink); }
+  tr.note td { border-top: 0; padding: 6px 0 0 0; color: var(--muted); font-size: 12.5px; } tr.note .link, .lines .note .link { font-size: 12.5px; } .lines .note { margin-left: auto; align-self: center; color: var(--muted); font-size: 12.5px; }
+  .plan tr.hyp .nm::before, .plan tr.estrow .nm::before { content: ""; flex: none; width: 9px; height: 9px; margin: 0 8px 0 0; border: 1px dashed var(--muted); border-radius: 3px; }
+  .plan td.n.est { text-decoration: underline dashed; text-decoration-color: var(--muted); text-underline-offset: 4px; }
+  .plan tr.ref td { color: var(--muted); font-weight: 400; font-size: 12.5px; border-top: 0; padding-top: 4px; }
+  .plan { table-layout: fixed; }
+  .plan td, .plan th { padding-right: 7px; } .plan th:last-child, .plan td:last-child { padding-right: 12px; }
+  .plan th.month { cursor: pointer; } .plan th.month.hov { color: var(--ink); } .plan td[data-col] { cursor: pointer; }
+  .plan tr.var td { border-top: 0; border-bottom: 1px solid var(--rule); font-weight: 500; } .plan tr.var td.name { font-family: var(--display); }
+  .plan tr.sum td { border-top: 0; background: var(--plate); }
+  .plan tr.add td { border-top: 0; padding: 6px 0 10px 0; }
+  .plan tr.add .form { gap: 14px; } .plan tr.add .form input { font-size: 13px; } #ad-l { flex: 1 1 200px; } #ad-a { flex: none; width: 110px; } #ad-m { flex: none; width: 150px; } .plan tr.add td { padding-right: 14px; }
+  #plot { margin-top: 6px; }
+  .plan tr.sum td { font-weight: 560; font-size: 14px; } .plan tr.sum td.name { font-family: var(--display); }
+  .plan tr.sum .sub { font-weight: 400; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 22px; color: var(--soft); font-size: 12.5px; padding: 0 0 8px; } .legend i { display: inline-block; vertical-align: middle; margin-right: 7px; }
+  .sq { display: inline-block; width: 8px; height: 8px; border-radius: 2.5px; margin-right: 5px; }
+  .plan .hov { background: rgba(69,117,205,.05); } .plan tr.sum td.hov { background: #eef3f9; }
+  .plan .hl { background: rgba(69,117,205,.08); } .plan tr.sum td.hl { background: #e9f0fa; }
+  .plan .act { flex: none; margin-left: 6px; white-space: nowrap; }
+  .plan .act .x { color: var(--faint, #c4c4cc); } .plan tr:hover .act .x { color: var(--muted); } .plan .act .x:hover { color: var(--ink); } .plan .act .x.ok:hover { color: var(--green); }
+  #note { margin-bottom: 8px; padding: 5px 10px; background: var(--glass); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: var(--glass-shadow); border-radius: 10px; font-size: 12.5px; color: var(--soft); } #note[hidden] { display: none; }
+  .band { fill: transparent; cursor: pointer; } .band.hov { fill: rgba(69,117,205,.05); } .band.on { fill: rgba(69,117,205,.1); }
+  #plot .reveal { transform-box: fill-box; transform-origin: left center; animation: reveal 1.1s cubic-bezier(.2,.7,.2,1) both; } @keyframes reveal { from { transform: scaleX(0); } }
+  @media (prefers-reduced-motion: reduce) { #plot .reveal { animation: none; } }
+  svg { display: block; } svg text { font: 10px var(--mono); fill: #8a8d96; pointer-events: none; }
+
+  /* contrats */
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); padding: 0 0 6px; }
+  .pill { border: 1px solid var(--rule-strong); background: var(--card); border-radius: 8px; padding: 3px 9px; font-size: 12.5px; cursor: pointer; color: var(--soft); }
+  .pill.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .card.over { outline: 2px dashed var(--blue); outline-offset: 8px; border-radius: 10px; }
+  .thinking::after { content: "…"; animation: dots 1.2s steps(4) infinite; display: inline-block; width: 1.2em; overflow: hidden; vertical-align: bottom; }
+  @keyframes dots { from { width: 0; } to { width: 1.2em; } }
+  @media (prefers-reduced-motion: reduce) { .thinking::after { animation: none; } }
+
+  /* barre de discussion */
+  .dock { position: fixed; left: 216px; right: 0; bottom: 0; padding: 0 44px 20px; pointer-events: none; background: linear-gradient(to top, #f6f7f9 55%, rgba(246,247,249,0)); }
+  .dock > * { pointer-events: auto; max-width: 720px; margin: 0 auto; }
+  .talk { background: rgba(255,255,255,.86); -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4); border-radius: 14px; padding: 14px 40px 14px 16px; margin-bottom: 10px; box-shadow: var(--glass-shadow); max-height: 46vh; overflow-y: auto; position: relative; }
+  .talk .close { position: sticky; top: 0; float: right; margin-right: -30px; z-index: 1; background: var(--card); }
+  .talk .turn + .turn { border-top: 1px solid var(--rule); margin-top: 12px; padding-top: 12px; }
+  .talk .turn.old { color: var(--muted); }
+  .talk .did { display: flex; gap: 8px; align-items: baseline; padding: 6px 10px; background: var(--panel); border-radius: 8px; margin-top: 6px; font-size: 13px; }
+  .talk .did::before { content: "✓"; color: var(--green); font-weight: 700; }
+  .talk .err { color: var(--red); }
+  .talk .past { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--rule); cursor: pointer; }
+  .talk .past .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .talk .past small { color: var(--muted); white-space: nowrap; }
+  .composer { display: flex; align-items: center; gap: 6px; background: var(--glass); -webkit-backdrop-filter: blur(14px) saturate(1.4); backdrop-filter: blur(14px) saturate(1.4); border-radius: 12px; padding: 7px 7px 7px 16px; box-shadow: var(--glass-shadow); }
+  .composer:focus-within { box-shadow: var(--glass-shadow), 0 0 0 3px rgba(69,117,205,.18); }
+  .composer input { flex: 1; border: 0; outline: 0; background: none; padding: 8px 0; min-width: 0; }
+  .composer select { font-size: 12.5px; color: var(--soft); }
+  .hist { display: grid; place-items: center; width: 30px; height: 30px; flex: none; } .hist.on { background: var(--panel); color: var(--ink); }
+  .send { width: 34px; height: 34px; border-radius: 8px; border: 0; background: var(--ink); color: #fff; cursor: pointer; display: grid; place-items: center; flex: none; box-shadow: 0 0 0 1px var(--ink), 0 2px 4px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.12); }
+  .send[disabled] { opacity: .35; cursor: default; }
+  .send svg { width: 16px; height: 16px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* recherche globale */
+  .veil { position: fixed; inset: 0; background: rgba(214,228,238,.4); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); z-index: 20; display: grid; place-items: start center; padding-top: 14vh; }
+  .veil[hidden] { display: none; }
+  .palette { width: min(620px, 92vw); background: rgba(255,255,255,.9); -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4); border-radius: 14px; box-shadow: 0 30px 70px -20px rgba(20,32,74,.35), inset 0 0 0 1px #fff, 0 0 0 1px rgba(20,32,74,.08); overflow: hidden; }
+  .palette input { width: 100%; border: 0; outline: 0; padding: 16px 18px; font-size: 16px; border-bottom: 1px solid var(--rule); background: none; }
+  .palette .list { max-height: 52vh; overflow-y: auto; padding: 6px; }
+  .palette .grp { padding: 8px 12px 3px; color: var(--muted); font: 400 10.5px var(--mono); text-transform: uppercase; letter-spacing: .02em; }
+  .palette .res { display: flex; align-items: baseline; gap: 10px; padding: 8px 12px; border-radius: 9px; cursor: pointer; }
+  .palette .res.on { background: rgba(69,117,205,.1); }
+  .palette .res * { pointer-events: none; }
+  .palette .res .t { font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .palette .res .d { color: var(--muted); font-size: 12.5px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  @media (max-width: 1100px) {
+    .hero { column-gap: 22px; }
+    main { padding-left: 28px; padding-right: 28px; } .dock { padding-left: 28px; padding-right: 28px; }
+    .sp col.m { width: 9.4%; } .sp col.a { width: 11.4%; } .sp col.s { width: 13.5%; } .sp td.n { font-size: 12.5px; }
+    .plan td.n { font-size: 12.5px; } .plan tr.sum td.n { font-size: 13px; }
+    .plan col.m { width: 9.9%; } .plan col.m:last-child { width: 10.9%; } .plan .unc { display: none; } .plan .uncl { text-decoration: underline dashed; text-decoration-color: var(--muted); text-underline-offset: 3px; }
+    .plan .act { display: inline-flex; margin-left: 2px; } .plan .act .x { padding: 0 5px; } .plan tr.hyp .lb { font-size: 12.5px; }
+  }
+  @media (max-width: 980px) {
+    aside { width: 60px; padding: 14px 8px; } aside .label, .brand span, .sources, .find span, .find kbd { display: none; } nav a { justify-content: center; }
+    .dock { left: 60px; padding: 0 16px 16px; } main { padding: 22px 16px 150px; }
+    .explore { grid-template-columns: 1fr; } .explore .detail { border-left: 0; border-top: 1px solid var(--rule); max-height: none; }
+  }
+</style>
+
+<aside>
+  <div class="brand"><svg viewBox="100 100 824 824" aria-hidden="true"><defs><linearGradient id="vg-ciel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7eaed0"/><stop offset=".55" stop-color="#cfe3ee"/><stop offset="1" stop-color="#eef4f8"/></linearGradient><clipPath id="vg-forme"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath></defs><g clip-path="url(#vg-forme)"><rect x="100" y="100" width="824" height="824" fill="url(#vg-ciel)"/><g fill="#14204a"><circle cx="272" cy="530" r="5"/><circle cx="272" cy="590" r="9"/><circle cx="272" cy="650" r="10"/><circle cx="332" cy="470" r="8"/><circle cx="332" cy="530" r="14"/><circle cx="332" cy="590" r="19"/><circle cx="332" cy="650" r="21"/><circle cx="392" cy="410" r="5"/><circle cx="392" cy="470" r="14"/><circle cx="392" cy="530" r="22"/><circle cx="392" cy="590" r="27"/><circle cx="392" cy="650" r="27"/><circle cx="452" cy="410" r="9"/><circle cx="452" cy="470" r="19"/><circle cx="452" cy="530" r="27"/><circle cx="452" cy="590" r="27"/><circle cx="452" cy="650" r="27"/><circle cx="512" cy="410" r="10"/><circle cx="512" cy="470" r="21"/><circle cx="512" cy="530" r="27"/><circle cx="512" cy="590" r="27"/><circle cx="512" cy="650" r="27"/><circle cx="572" cy="410" r="9"/><circle cx="572" cy="470" r="19"/><circle cx="572" cy="530" r="27"/><circle cx="572" cy="590" r="27"/><circle cx="572" cy="650" r="27"/><circle cx="632" cy="410" r="5"/><circle cx="632" cy="470" r="14"/><circle cx="632" cy="530" r="22"/><circle cx="632" cy="590" r="27"/><circle cx="632" cy="650" r="27"/><circle cx="692" cy="470" r="8"/><circle cx="692" cy="530" r="14"/><circle cx="692" cy="590" r="19"/><circle cx="692" cy="650" r="21"/><circle cx="752" cy="530" r="5"/><circle cx="752" cy="590" r="9"/><circle cx="752" cy="650" r="10"/></g><ellipse cx="512" cy="1520" rx="1180" ry="860" fill="#f6f8fa"/></g></svg><span>Vigie</span></div>
+  <button class="find" id="find"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><span>Rechercher</span><kbd>⌘K</kbd></button>
+  <nav id="nav"></nav>
+  <div class="sources" id="sources"></div>
+</aside>
+<main><div class="page" id="main"></div></main>
+<div class="dock">
+  <div class="talk" id="talk" hidden></div>
+  <div class="talk" id="account" hidden></div>
+  <div id="note" hidden></div>
+  <form class="composer" id="composer">
+    <input id="ask" placeholder="Ajoute une dépense, pose une question ou écris « et si… »" autocomplete="off" aria-label="Message à Claude">
+    <button type="button" class="x hist" id="hist" title="Discussions précédentes" aria-label="Discussions précédentes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></button>
+    <span id="pick"></span>
+    <button class="send" id="send" aria-label="Envoyer"><svg viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+  </form>
+</div>
+<div class="veil" id="veil" hidden><div class="palette"><input id="pq" placeholder="Un client, un fournisseur, une facture, un paiement…" autocomplete="off"><div class="list" id="plist"></div></div></div>
+
+<script>
+const ICON = {
+  tresorerie: '<path d="M3 17l5-5 4 3 8-9"/><path d="M15 6h5v5"/>',
+  clients: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>',
+  depenses: '<path d="M4 9a8 8 0 0 1 14-3l2 2"/><path d="M20 4v4h-4"/><path d="M20 15a8 8 0 0 1-14 3l-2-2"/><path d="M4 20v-4h4"/>',
+};
+const TABS = { tresorerie: "Trésorerie", clients: "Clients et contrats", depenses: "Dépenses" };
+const SC = ["#4575cd", "#bf5a82", "#2f9a8f", "#c08a2e", "#7a6fb5", "#6b8e4e"]; // une couleur par scénario
+let chartShown = false; // la courbe se dessine de gauche à droite une seule fois, à l'ouverture
+let S = null, busy = false, flash = null, showKey = false, log = [], thinking = false, awsLogin = false, reading = false, pdfNote = null;
+let col = null; // colonne du plan mise en avant
+let pick = 0, sub = new URLSearchParams(location.search).get("sous") === "aws" ? "aws" : "abonnements", chatId = null, showHistory = false, sel = null, q = "", allOnce = false, showAdd = false, openK = new Set(), openC = new Set(), found = [], showCredits = false, showGuards = false;
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const money = (n, cur = "EUR") => new Intl.NumberFormat("fr-FR", { style: "currency", currency: cur, ...(cur === "USD" ? { currencyDisplay: "narrowSymbol" } : {}), maximumFractionDigits: Math.abs(n) >= 1000 || Number.isInteger(n) ? 0 : 2 }).format(n).replace("-", "−");
+const signed = (n) => (n > 0 ? "+" : "") + money(n);
+const first1 = (t) => t.replace(/^1 /, "1er ");
+const day = (d) => d ? first1(new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })) : "";
+const longDay = (d) => d ? first1(new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })) : "";
+const monthName = (m) => new Date(m + "-15").toLocaleDateString("fr-FR", { month: "short" }).replace(".", "");
+const monthLong = (m) => { const t = new Date(m + "-15").toLocaleDateString("fr-FR", { month: "long", year: "numeric" }); return t[0].toUpperCase() + t.slice(1); };
+const monthNo = (m) => +m.slice(0, 4) * 12 + +m.slice(5, 7);
+const addMonth = (m, n) => { const d = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7) - 1 + n, 1)); return d.toISOString().slice(0, 7); };
+const months1 = (n) => n.toLocaleString("fr-FR", { maximumFractionDigits: 1 });
+const runwayText = (r) => r == null ? "plus de 24 mois" : months1(r) + " mois";
+const ago = (iso) => {
+  if (!iso) return "jamais";
+  const min = Math.round((Date.now() - Date.parse(iso)) / 6e4);
+  return min < 2 ? "à l'instant" : min < 60 ? `il y a ${min} min` : min < 1440 ? `il y a ${Math.round(min / 60)} h` : `le ${day(iso)}`;
+};
+const short = (name) => String(name ?? "").replace(/\s*(&|et)\s+ASSOCI[EÉ]S.*$/i, "").replace(/\b(\p{L})(\p{L}*)/gu, (_, a, b) => a.toUpperCase() + b.toLowerCase());
+const clientName = (id) => short(S.clients.find((c) => c.id === id)?.name ?? "");
+const norm = (s) => String(s ?? "").toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+// recherche par début de mot, tirets et espaces ignorés ; `loose` : n'importe où dans le texte
+function matcher(query, loose) {
+  const n = norm(query), flat = n.replace(/[^\p{L}\p{N}]/gu, "");
+  if (loose || !flat) return (...parts) => norm(parts.join(" ")).includes(n);
+  return (...parts) => parts.some((p) => { const w = norm(p).match(/[\p{L}\p{N}]+/gu) ?? []; return w.some((_, i) => { let c = ""; for (let j = i; j < w.length && c.length < flat.length; j++) c += w[j]; return c.startsWith(flat); }); });
+}
+// état d'une facture, dit une seule fois (S.invoices n'a pas lateDays : on cherche dans S.unpaid)
+const etatFacture = (i) => { const f = S.unpaid.find((x) => x.number === i.number) ?? i; return i.status === "paid" ? (i.paidAt ? `payée le ${day(i.paidAt)}` : "payée") : `${f.overdue ? "échue" : "à payer"} le ${day(f.due ?? i.due)}`; };
+const prevMonth = (iso) => { const d = new Date(iso.slice(0, 7) + "-01T12:00:00Z"); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 7); };
+const lateText = (n) => `en retard de ${n} jour${n > 1 ? "s" : ""}`;
+const fig = (k, v, s = "", cls = "") => `<div class="fig ${cls}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+const card = (title, count, right, body, extra = "") => `<div class="card" ${extra}><header>${title ? `<h2>${title}</h2>` : ""}${count !== "" ? `<span class="count">${count}</span>` : ""}<span class="right">${right}</span></header>${body}</div>`;
+// une valeur qu'on modifie en cliquant dessus ; `data` porte ce que la saisie doit enregistrer
+const ed = (type, value, show, data, title = "Cliquer pour modifier", blank = "ajouter") => `<span class="ed ${value === "" || value == null || value === 0 ? "empty" : ""}" tabindex="0" role="button" title="${title}" data-ed="${type}" data-value="${esc(value ?? "")}" data-attrs="${esc(JSON.stringify(data))}">${value === "" || value == null || value === 0 ? blank : show}</span>`;
+
+let note = null; // { texte, place, at } : place = « row » (sous la rangée touchée, partout), « tabs » (à côté des onglets de scénario) ou « bar » (barre du bas, repli)
+let adding = null; // « hyp » ou « line » : la saisie sur place sous le tableau de Trésorerie est ouverte
+let askRev = null; // clé de la ligne de facture dont « chaque mois ? » attend un Oui ou un Non
+const refusals = (() => { try { return new Set(JSON.parse(localStorage.getItem("kaoly-chaque-mois-non") ?? "[]")); } catch { return new Set(); } })(); // lignes dont la réponse est « Non »
+const cfgAsked = (key) => refusals.has(key);
+let armed = null; // identifiant du scénario dont « Tout passer dans le classique » attend un Oui
+let askSeedFor; // onglet (identifiant de scénario, ou null pour le classique) pour lequel le texte de la barre a été posé
+let askSeed = ""; // texte posé dans la barre par « Ajouter une hypothèse » ou « Ajouter une ligne » : on le vide si on change d'écran sans l'avoir complété
+function unseed() { const a = document.getElementById("ask"); if (askSeed && a.value === askSeed) a.value = ""; askSeed = ""; }
+const plural = (n, w) => `${n} ${w}${n > 1 ? "s" : ""}`, surMois = (n) => n > 1 ? `, sur ${n} mois` : "";
+function setNote(text, place = "bar") { note = text ? { texte: text, place } : null; const el = document.getElementById("note"), bar = note?.place === "bar"; el.hidden = !bar; el.innerHTML = bar ? `${esc(text)} · <button class="link" data-action="undo-note">Annuler</button>` : ""; if (text) { if (log.length) log.at(-1).stale = true; renderTalk(); } }
+const NOTE_ROW = (t) => `<tr class="note"><td colspan="${Math.max(...[...document.querySelectorAll("#main tr")].filter((r) => r.closest("table") === t).map((r) => [...r.cells].reduce((n, c) => n + c.colSpan, 0)))}">${esc(note.texte)} <button class="link" data-action="undo-note">Annuler</button></td></tr>`;
+function placeNote() { // un seul mécanisme : la note s'écrit sous la rangée touchée (ou à sa place si elle a disparu)
+  if (note?.place !== "row") return;
+  const at = note.at, bar = document.getElementById("note"), tables = [...document.querySelectorAll("#main table")];
+  const el = at?.sel ? document.querySelector("#main " + at.sel) : null, t = el ? el.closest("table") : tables[at?.t];
+  let ok = false;
+  if (el) { el.closest("tr").insertAdjacentHTML("afterend", NOTE_ROW(t)); ok = true; }
+  else if (t) { const rows = [...t.rows]; if (rows[at.r]) { rows[at.r].insertAdjacentHTML("beforebegin", NOTE_ROW(t)); ok = true; } else if (rows.length) { rows.at(-1).insertAdjacentHTML("afterend", NOTE_ROW(t)); ok = true; } }
+  if (!ok) { bar.hidden = false; bar.innerHTML = `${esc(note.texte)} · <button class="link" data-action="undo-note">Annuler</button>`; }
+}
+async function undoable(text, body, place) {
+  const ev = window.event?.target, tr = place === "tabs" ? null : ev?.closest?.("#main tr"), key = ev?.closest?.("[data-vendor-recurring], [data-vendor-exc], [data-revenue]");
+  const gone = !!ev?.closest?.("button.x"), at = !tr ? null : key && !gone ? { sel: `[${[...key.attributes].find((a) => a.name.startsWith("data-")).name}="${CSS.escape(key.getAttribute([...key.attributes].find((a) => a.name.startsWith("data-")).name))}"]` } : { t: [...document.querySelectorAll("#main table")].indexOf(tr.closest("table")), r: tr.rowIndex };
+  const j = await post("/api/config", body);
+  if (j && !j.error) { setNote(text, place ?? (at ? "row" : "bar")); if (note && at) note.at = at; if (place || at) render(); }
+  return j;
+}
+async function post(path, body = {}) {
+  setNote(""); armed = null; busy = true; render();
+  let j = null;
+  try {
+    j = await (await fetch(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) })).json();
+    flash = path === "/api/chat" ? null : j.error ?? null; S = j;
+  } catch (e) { flash = "Le serveur local ne répond pas."; }
+  busy = false; render();
+  return j;
+}
+
+// ───── la courbe : solde réel, projection, scénarios ; on clique sur un mois pour en voir le détail ─────
+function drawChart() {
+  const box = document.getElementById("plot"), ths = [...document.querySelectorAll(".plan th[data-c]")];
+  if (!box || !ths.length) return;
+  const r0 = box.getBoundingClientRect(), cols = ths.map((t) => { const r = t.getBoundingClientRect(); return { x: r.left - r0.left, w: r.width }; });
+  const w = r0.width, h = Math.max(180, Math.min(280, innerHeight - 580)), padL = 52, padT = 16, padB = 22;
+  const now = S.now.slice(0, 7), first = S.balanceSeries[0]?.date.slice(0, 7) ?? now;
+  const from = monthNo(first) > monthNo(addMonth(now, -5)) ? first : addMonth(now, -5);
+  const start = (m) => +new Date(+m.slice(0, 4), +m.slice(5, 7) - 1, 1);
+  const t0 = Date.now(), T0 = start(from), xNow = cols[0].x; // aujourd'hui tombe au bord de la première colonne
+  const x = (t) => padL + (t - T0) / (t0 - T0) * (xNow - padL);
+  const past = S.balanceSeries.filter((p) => Date.parse(p.date) >= T0).map((p) => ({ x: x(Date.parse(p.date)), v: p.balance }));
+  past.push({ x: xNow, v: S.balance });
+  // chaque point tombe sur la verticale du solde de sa colonne (fin du texte de la rangée « En banque en fin de mois »)
+  const ends = cols.map((c, i) => { const td = document.querySelector(`.plan tr.sum td[data-col="${i}"]`); if (!td) return c.x + c.w - (i === cols.length - 1 ? 18 : 11); const rg = document.createRange(); rg.selectNodeContents(td); return rg.getBoundingClientRect().right - r0.left - 4; });
+  const pts = (proj) => proj.slice(1, 8).map((p, i) => ({ x: ends[i], v: p.balance }));
+  const future = pts(S.projection), what = S.scenarios.map((sc, n) => ({ id: sc.id, color: SC[n % SC.length], pts: pts(sc.projection), n: sc.flows.length })).filter((s) => s.n);
+  const values = [...past, ...future, ...what.flatMap((s) => s.pts)].map((p) => p.v);
+  const lo = Math.min(0, ...values), hi = Math.max(...values) * 1.08;
+  const step = [1000, 2000, 5000, 10000, 20000, 50000, 100000].find((s) => (hi - lo) / s <= 5) ?? 200000;
+  const y = (v) => padT + (1 - (v - lo) / (hi - lo)) * (h - padT - padB);
+  let grid = "", ticks = "";
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step)
+    grid += `<line x1="${padL}" x2="${w}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? "rgba(20,32,74,.28)" : "rgba(20,32,74,.10)"}" ${v === 0 ? "" : 'stroke-dasharray="3 4"'}/><text x="${padL - 9}" y="${y(v) + 4}" text-anchor="end">${v === 0 ? "0" : v / 1000 + " k€"}</text>`;
+  for (let m = from; monthNo(m) < monthNo(now); m = addMonth(m, 1)) { const tx = Math.max(x(start(m)), padL); if (xNow - tx > 26) ticks += `<text x="${tx + 3}" y="${h - 6}">${monthName(m)}</text>`; }
+  const bands = cols.map((c, i) => `<rect class="band ${i === col ? "on" : ""}" data-col="${i}" x="${c.x}" y="0" width="${c.w}" height="${h}"/>`).join("");
+  const solid = past.map((p, i) => i ? `H${p.x.toFixed(1)}V${y(p.v).toFixed(1)}` : `M${p.x.toFixed(1)},${y(p.v).toFixed(1)}`).join("");
+  const path = (list) => `M${xNow.toFixed(1)},${y(S.balance).toFixed(1)}` + list.map((p) => `L${p.x.toFixed(1)},${y(p.v).toFixed(1)}`).join("");
+  const focus = sel?.kind === "scenario" && what.some((s) => s.id === sel.id) ? sel.id : null;
+  // l'avenir n'est pas sûr : une trame de points sous le classique, qui pâlit avec la distance
+  const base = y(Math.max(lo, 0)), road = [{ x: xNow, v: S.balance }, ...future], xEnd = road.at(-1).x;
+  const at = (x) => { for (let i = 1; i < road.length; i++) if (x <= road[i].x) { const p = road[i - 1], q = road[i]; return y(p.v) + (y(q.v) - y(p.v)) * (x - p.x) / (q.x - p.x); } return y(road.at(-1).v); };
+  let dots = "";
+  for (let x = xNow + 4; x <= xEnd; x += 7) { const ly = at(x), f = (x - xNow) / (xEnd - xNow);
+    for (let yy = base - 3; yy > ly + 4; yy -= 7) { const k = 1 - (yy - ly) / (base - ly); dots += `<circle cx="${x.toFixed(1)}" cy="${yy.toFixed(1)}" r="${((.45 + 1.35 * k) * (1 - .5 * f)).toFixed(2)}" fill-opacity="${(.5 - .28 * f).toFixed(2)}"/>`; } }
+  const reveal = !chartShown; chartShown = true;
+  box.innerHTML = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Solde en banque, puis projection du classique et des scénarios, mois par mois">
+    <defs><linearGradient id="passe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4575cd" stop-opacity=".24"/><stop offset="1" stop-color="#4575cd" stop-opacity="0"/></linearGradient>
+      <clipPath id="devoile"><rect class="${reveal ? "reveal" : ""}" x="0" y="0" width="${w}" height="${h}"/></clipPath></defs>
+    ${bands}${grid}${ticks}
+    <line x1="${xNow}" x2="${xNow}" y1="${padT - 6}" y2="${base}" stroke="var(--ink)" stroke-opacity=".3" stroke-dasharray="2 3" pointer-events="none"/>
+    <text x="${xNow - 6}" y="${padT + 2}" text-anchor="end">aujourd'hui</text>
+    <g pointer-events="none" clip-path="url(#devoile)">
+    <path d="${solid}V${base.toFixed(1)}H${past[0].x.toFixed(1)}Z" fill="url(#passe)"/>
+    <g fill="var(--blue)" opacity="${focus ? .4 : 1}">${dots}</g>
+    <path d="${solid}" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"/>
+    <path d="${path(future)}" fill="none" stroke="var(--ink)" stroke-width="${focus ? 1.6 : 2}" stroke-dasharray="5 4" opacity="${focus ? .35 : 1}"/>
+    ${future.map((p) => `<circle cx="${p.x}" cy="${y(p.v)}" r="3.2" fill="#f6f7f9" stroke="${p.v < 0 ? "var(--red)" : "var(--ink)"}" stroke-width="1.6" opacity="${focus ? .35 : 1}"/>`).join("")}
+    ${what.map((s) => `<g opacity="${focus === s.id ? 1 : .3}"><path d="${path(s.pts)}" fill="none" stroke="${s.color}" stroke-width="${focus === s.id ? 2.2 : 1.6}" stroke-dasharray="5 4"/>${s.pts.map((p) => `<circle cx="${p.x}" cy="${y(p.v)}" r="${focus === s.id ? 3.6 : 3}" fill="#f6f7f9" stroke="${p.v < 0 ? "var(--red)" : s.color}" stroke-width="1.6"/>`).join("")}</g>`).join("")}
+    <circle cx="${xNow}" cy="${y(S.balance)}" r="3.8" fill="var(--ink)"/>
+    </g>
+  </svg>`;
+}
+addEventListener("resize", () => { drawChart(); drawRevenue(); });
+
+// ───── écrans ─────
+// même hypothèse qui ne diffère que par le mois (« de janvier », « , février 2027 ») : une seule rangée, montants additionnés
+const MOIS = "janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre", noMonth = new RegExp(`(?:,\\s*|\\s+)(?:de\\s+|d['’])?(?:${MOIS})(?:\\s+\\d{4})?(?=[\\s,(]|$)`, "i");
+const fold = (rows, ids) => { const out = [], seen = new Map();
+  for (const l of rows) { const lb = l.label.replace(noMonth, ""), key = lb !== l.label && !l.monthly ? lb + "|" + Math.sign(l.cells.reduce((a, b) => a + b, 0)) : null, g = key && seen.get(key);
+    if (g) { l.cells.forEach((v, i) => { g.cells[i] += v; }); g.ids.push(...ids(l)); g.labels.push(l.label); g.estimated ||= l.estimated; }
+    else { const n = { ...l, cells: [...l.cells], ids: ids(l), labels: [l.label] }; if (key) { n.label = lb; seen.set(key, n); } out.push(n); } }
+  return out; };
+// nombre de rangées d'hypothèses affichées pour un scénario (après réunion), quel que soit l'onglet ouvert
+const ownRows = (sc) => { const m = new Map(sc.flows.map((f, i) => [i, { label: f.label, flow: i, cells: Array(7).fill(0) }])); sc.projection.slice(1, 8).forEach((p, i) => p.events.forEach((e) => { const l = e.own && m.get(e.flow); if (l) { l.cells[i] += e.amount; if (e.monthly) l.monthly = true; } })); return fold([...m.values()], (l) => [l.flow]); };
+const uncRe = /\s*\((?:estimation|date supposée|démarrage supposé)\)$/i, uncertain = (t) => /\((?:estimation|date supposée|démarrage supposé)\)|à confirmer/i.test(t);
+// Chiffre d'affaires HT sur un seul graphique : le récurrent (le niveau de chaque mois) en courbe, la mise en place du mois en barres.
+// Trait plein : facturé ou signé. Pointillé : ce qui est en discussion, c'est-à-dire les hypothèses de chiffre d'affaires des scénarios.
+const revData = () => {
+  const R = S.revenue, M = R.months, cur = M.indexOf(S.now.slice(0, 7));
+  const sum = (rows, kind) => M.map((_, j) => rows.reduce((t, r) => t + (r.kind === kind ? r.billed[j] + r.expected[j] : 0), 0));
+  const base = { rec: sum(R.rows, "recurring"), set: sum(R.rows, "setup") };
+  const scen = S.scenarios.map((sc, i) => { const own = R.scenarios.find((x) => x.id === sc.id)?.rows ?? [], rec = sum(own, "recurring");
+    return { name: sc.name, color: SC[i % SC.length], moves: rec.some(Boolean), rec: base.rec.map((v, j) => v + rec[j]), set: sum(own, "setup") }; });
+  const lines = []; // deux scénarios qui donnent la même courbe n'en font qu'une
+  for (const s of scen) if (s.moves) { const g = lines.find((x) => x.rec.join() === s.rec.join()); if (g) g.name += ", " + s.name; else lines.push({ ...s }); }
+  // ponytail : la mise en place en discussion d'un mois est celle du scénario le plus haut, pas une barre par scénario
+  const pipeSet = M.map((_, j) => Math.max(0, ...scen.map((s) => s.set[j])));
+  const setToCome = R.rows.reduce((t, r) => t + (r.kind === "setup" ? r.expected.reduce((a, b) => a + b, 0) : 0), 0);
+  return { M, cur, base, lines, pipeSet, setToCome };
+};
+// les pistes : une rangée par hypothèse de chiffre d'affaires, même si plusieurs scénarios la portent
+const pipeRows = () => { const out = [];
+  S.scenarios.forEach((sc, n) => sc.flows.forEach((f, i) => { if (!f.revenue) return;
+    const g = out.find((x) => x.f.label === f.label && x.f.amount === f.amount && x.f.date === f.date), tag = { name: sc.name, color: SC[n % SC.length] };
+    if (g) g.where.push(tag); else out.push({ f, sc: sc.id, i, where: [tag] }); }));
+  return out.sort((a, b) => a.f.date < b.f.date ? -1 : 1); };
+function drawRevenue() {
+  const box = document.getElementById("plot-ca"); if (!box) return;
+  const { M, cur, base, lines, pipeSet } = revData(), last = M.length - 1;
+  const w = box.getBoundingClientRect().width, h = 300, padL = 52, padR = 165, padT = 24, padB = 26;
+  const bw = (w - padL - padR) / M.length, cx = (j) => padL + (j + .5) * bw, bar = Math.min(26, bw * .4);
+  const hi = Math.max(1, ...base.rec, ...lines.flatMap((s) => s.rec), ...M.map((_, j) => base.set[j] + pipeSet[j])) * 1.14;
+  const step = [500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 100000].find((s) => hi / s <= 5) ?? 200000;
+  const y = (v) => padT + (1 - v / hi) * (h - padT - padB), zero = y(0), k = (v) => (v / 1000).toLocaleString("fr-FR", { maximumFractionDigits: 1 }) + " k€";
+  const all = M.map((_, j) => j), fut = all.slice(Math.max(cur, 0)), xNow = padL + (cur + 1) * bw;
+  const pt = (j, arr) => `${cx(j).toFixed(1)},${y(arr[j]).toFixed(1)}`, d = (js, arr) => js.map((j, i) => (i ? "L" : "M") + pt(j, arr)).join("");
+  const top = M.map((_, j) => Math.max(base.rec[j], ...lines.map((s) => s.rec[j])));
+  let grid = ""; for (let v = 0; v <= hi; v += step) grid += `<line x1="${padL}" x2="${w - padR + 8}" y1="${y(v)}" y2="${y(v)}" stroke="${v ? "rgba(20,32,74,.10)" : "rgba(20,32,74,.28)"}" ${v ? 'stroke-dasharray="3 4"' : ""}/><text x="${padL - 9}" y="${y(v) + 4}" text-anchor="end">${v ? k(v) : "0"}</text>`;
+  // le montant d'une barre monte au-dessus d'un point de courbe qui tomberait dessus
+  const above = (j, ly) => { for (const v of [base.rec[j], ...lines.map((x) => x.rec[j])].map(y).sort((p, q) => q - p)) if (v > ly - 15 && v < ly + 7) ly = v - 9; return ly; };
+  const bars = all.map((j) => { const s = Math.max(base.set[j], 0), p = pipeSet[j], x = (cx(j) - bar / 2).toFixed(1);
+    return (s ? `<rect x="${x}" y="${y(s)}" width="${bar}" height="${zero - y(s)}" rx="3" fill="var(--blue)" fill-opacity="${j <= cur ? .5 : .24}"/>` : "")
+      + (p ? `<rect x="${x}" y="${y(s + p)}" width="${bar}" height="${y(s) - y(s + p)}" rx="3" fill="url(#trame)" stroke="var(--blue)" stroke-dasharray="3 3"/>` : "")
+      + (s + p ? `<text x="${cx(j)}" y="${above(j, y(s + p) - 6)}" text-anchor="middle" style="paint-order:stroke;stroke:#f6f7f9;stroke-width:3px">${k(s + p)}</text>` : ""); }).join("");
+  const tip = (j) => [monthLong(M[j]), `Récurrent : ${money(base.rec[j])}`, ...(j > cur ? lines.map((s) => `${s.name} : ${money(s.rec[j])}`) : []),
+    base.set[j] ? `Mise en place ${j <= cur ? "facturée" : "signée"} : ${money(base.set[j])}` : "", pipeSet[j] ? `Mise en place en discussion : ${money(pipeSet[j])}` : ""].filter(Boolean).join("\n");
+  const tags = [{ t: "Signé", v: base.rec[last], c: "var(--ink)" }, ...lines.map((s) => ({ t: s.name.length > 18 ? s.name.slice(0, 17) + "…" : s.name, v: s.rec[last], c: s.color }))].sort((a, b) => b.v - a.v);
+  let py = -99;
+  const labels = tags.map((g) => { py = Math.max(y(g.v) + 4, py + 16); return `<text x="${cx(last) + 12}" y="${py}" style="font:500 12px var(--display);fill:${g.c}">${esc(g.t)} · ${money(Math.round(g.v))}</text>`; }).join("");
+  box.innerHTML = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Récurrent de chaque mois en courbe et mise en place du mois en barres : facturé et signé en plein, en discussion en pointillé">
+    <defs><linearGradient id="g-ca" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14204a" stop-opacity=".10"/><stop offset="1" stop-color="#14204a" stop-opacity="0"/></linearGradient>
+      <pattern id="trame" width="7" height="7" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.1" fill="#4575cd" fill-opacity=".42"/></pattern></defs>
+    ${grid}${all.map((j) => `<text x="${cx(j)}" y="${h - 7}" text-anchor="middle">${monthName(M[j])}${M[j].endsWith("-01") ? " " + M[j].slice(2, 4) : ""}</text>`).join("")}
+    ${cur >= 0 && cur < last ? `<line x1="${xNow}" x2="${xNow}" y1="${padT - 10}" y2="${zero}" stroke="var(--ink)" stroke-opacity=".3" stroke-dasharray="2 3"/><text x="${xNow - 6}" y="${padT - 4}" text-anchor="end">aujourd'hui</text>` : ""}
+    ${bars}
+    ${lines.length ? `<path d="${d(fut, top)}${[...fut].reverse().map((j) => "L" + pt(j, base.rec)).join("")}Z" fill="url(#trame)"/>` : ""}
+    <path d="${d(all, base.rec)}L${cx(last)},${zero}L${cx(0)},${zero}Z" fill="url(#g-ca)"/>
+    ${lines.map((s) => `<path d="${d(fut, s.rec)}" fill="none" stroke="${s.color}" stroke-width="1.8" stroke-dasharray="5 4"/>${fut.slice(1).map((j) => `<circle cx="${cx(j)}" cy="${y(s.rec[j])}" r="3" fill="#f6f7f9" stroke="${s.color}" stroke-width="1.6"/>`).join("")}`).join("")}
+    <path d="${d(all, base.rec)}" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linejoin="round"/>${all.map((j) => `<circle cx="${cx(j)}" cy="${y(base.rec[j])}" r="2.8" fill="var(--ink)"/>`).join("")}
+    ${labels}
+    ${all.map((j) => `<rect x="${padL + j * bw}" y="0" width="${bw}" height="${h}" fill="transparent"><title>${esc(tip(j))}</title></rect>`).join("")}
+  </svg>`;
+}
+const onceTip = (D) => D.onceSeen > 0 ? `dont ${money(Math.round(D.onceSeen))} vus une seule fois` : "";
+const views = {
+  tresorerie() {
+    const late = S.unpaid.filter((i) => i.overdue).length, D = S.drivers, MM = S.measuredMonths, ML = (m) => new Date(m + "-15").toLocaleDateString("fr-FR", { month: "long" });
+    const cur = sel?.kind === "scenario" ? S.scenarios.find((x) => x.id === sel.id) : null; // null : le classique
+    const n = cur ? S.scenarios.indexOf(cur) : -1, proj = (cur ?? S).projection, cols = proj.slice(1, 8);
+    // le plan : une ligne par chose qui entre ou sort, une colonne par mois
+    const lines = new Map();
+    const get = (key, init) => lines.get(key) ?? (lines.set(key, { cells: Array(7).fill(0), ...init }), lines.get(key));
+    (cur?.flows ?? []).forEach((f, i) => get("s:" + i, { label: f.label, own: true, flow: i, when: f.monthly ? `chaque mois dès le ${day(f.date)}${f.count ? `, ${f.count} mois` : ""}` : `le ${day(f.date)} ${f.date.slice(0, 4)}` }));
+    cols.forEach((m, i) => m.events.forEach((e) => { const l = get(e.own ? "s:" + e.flow : "b:" + (e.group ?? e.label), { label: e.group ?? e.label, own: !!e.own, sure: e.sure, plannedId: e.plannedId }); l.cells[i] += e.amount; if (e.monthly) l.monthly = true; if (e.estimated) l.estimated = true; }));
+    const all = [...lines.values()], base = all.filter((l) => !l.own), own = fold(all.filter((l) => l.own), (l) => [l.flow]), baseMonthly = base.filter((l) => l.monthly), baseOnce = fold(base.filter((l) => !l.monthly), (l) => l.plannedId ? [l.plannedId] : []);
+    const live = !!cur?.flows.length; // un scénario sans hypothèse se confond avec le classique
+    const nbh = (t) => t.replace(/(?<=[\p{L}\p{N}])-(?=[\p{L}\p{N}])/gu, "\u2011"); // « F‑2026‑008 » ne se coupe pas
+    const noteTab = note?.place === "tabs" ? `<span class="note">${esc(note.texte)} <button class="link" data-action="undo-note">Annuler</button></span>` : "";
+    const addLink = (action, text) => `<tr class="add"><td colspan="8">${adding === action ? `<div class="form bare"><input id="ad-l" placeholder="Libellé" autocomplete="off"><input id="ad-a" type="number" step="any" placeholder="Montant, ex. −500"><input id="ad-m" type="month" value="${addMonth(S.now.slice(0, 7), 1)}"></div>` : `<button class="link" data-action="${action}">${text}</button>`}</td></tr>`;
+    const baseLine = (l) => line(esc(l.label), l.cells, "", l.ids?.length ? `<button class="x" title="Retirer cette annonce" data-planned-del="${esc(l.ids.join(","))}" data-label="${esc(l.label)}">×</button>` : "", "", l.labels?.length > 1 ? l.labels.join(" · ") : "", l.estimated || (uncertain(l.label) ? "à confirmer" : false));
+    const ownLine = (l) => { const ix = l.ids.join(","); return line(esc(l.label), l.cells, l.labels.length > 1 ? "" : l.when, `<button class="x ok" title="C'est confirmé : ${l.ids.length > 1 ? "ces lignes passent" : "cette ligne passe"} dans le classique" data-flow-ok="${ix}" data-label="${esc(l.label)}" data-n="${l.ids.length}">✓</button><button class="x" title="Retirer ${l.ids.length > 1 ? "ces hypothèses" : "cette hypothèse"}" data-flow-del="${ix}" data-label="${esc(l.label)}" data-n="${l.ids.length}">×</button>`, "hyp", l.labels.length > 1 ? l.labels.join(" · ") : ""); };
+    const kEuro = (v, sg) => { const a = Math.abs(v), t = a > 99999 ? new Intl.NumberFormat("fr-FR").format(Math.round(a / 1000)) + " k€" : new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(a); return (v < 0 ? "−" : sg && v > 0 ? "+" : "") + t; };
+    const cell = (v, i, kind, est) => { const sum = kind === "sum" || kind === "ref", txt = sum || v ? kEuro(v, !sum) : "·", exact = sum ? money(v) : signed(v);
+      const tip = [est && v ? (est === true ? "date estimée" : est) : "", (sum || v) && txt !== exact ? exact : ""].filter(Boolean).join(" · ");
+      return `<td class="n ${i === col ? "hl" : ""} ${sum ? (v < 0 && kind === "sum" ? "neg" : "") : v > 0 ? "pos" : v < 0 ? "neg" : ""} ${v || sum ? "" : "dim"} ${est && v ? "est" : ""}" data-col="${i}"${tip ? ` title="${esc(tip)}"` : ""}>${txt}</td>`; };
+    const line = (label, cells, sub = "", act = "", cls = "", tip = "", est = false) => `<tr class="${cls}${est ? " estrow" : ""}"><td class="name"><div class="nm"><span class="lb${cls === "hyp" && uncRe.test(label) ? " uncl" : ""}" title="${esc(tip || (sub ? label.replace(/&amp;/g, "&") + " · " + sub : ""))}">${cls === "hyp" ? nbh(label).replace(uncRe, (u) => `<span class="unc">${u}</span>`) : nbh(label)}</span>${act ? `<span class="act">${act}</span>` : ""}</div></td>${cells.map((v, i) => cell(v, i, cls, est)).join("")}</tr>`;
+    const head = (label) => `<tr class="grp"><td colspan="8">${label}</td></tr>`;
+    const tab = (id, name, runway, color, on, close, empty) => `<span class="line ${on ? "on" : ""}" data-line="${esc(id)}"><i style="color:${color}"></i>${esc(name)} ${empty ? '<span class="dim">vide</span>' : `<b>${runwayText(runway)}</b>`}${close ? `<button class="x" data-scenario-close="${esc(id)}" title="Supprimer ce scénario">×</button>` : ""}</span>`;
+    return `
+    <h1>Trésorerie</h1>
+    <div class="hero">
+      ${fig("En banque", money(S.balance), "", "big")}
+      ${live ? fig("Mois devant nous", `<span title="${esc("classique : " + runwayText(S.runway) + (onceTip(D) ? " · " + onceTip(D) : ""))}">${cur.runway == null ? "plus de 24 <small>mois</small>" : `${months1(cur.runway)} <small>mois</small>`}</span>`, `<i style="display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;background:${SC[n % SC.length]}"></i>scénario ${esc(cur.name)}`)
+        : fig("Mois devant nous", `<span${onceTip(D) ? ` title="${esc(onceTip(D))}"` : ""}>${S.runway == null ? "plus de 24 <small>mois</small>" : `${months1(S.runway)} <small>mois</small>`}</span>`, "sans rien de nouveau")}
+      ${(() => { const T = D.terms ?? [], eng = T.reduce((t, x) => t + x.monthly, 0), out = Math.round(D.net - eng), last = T.map((x) => x.end).sort().pop(),
+        names = T.map((x) => money(x.monthly) + " de " + x.name), tip = `${money(S.recurringIn)} d'entrées − ${money(D.baseOut)} de dépenses habituelles${names.length ? " − " + names.slice(0, -1).concat(names.slice(-1)).join(" et ") : ""}`;
+        if (live) { const d = Math.round(cols[6].balance - S.projection[7].balance); return fig("Par rapport au classique", `<span class="${d >= 0 ? "pos" : "neg"}">${signed(d)}</span>`, `fin ${monthName(cols[6].month)}`); }
+        return fig("Chaque mois", `<span class="${out >= 0 ? "pos" : "neg"}" title="${esc(tip + (onceTip(D) ? " · " + onceTip(D) : ""))}">${signed(out)}</span>`, last ? `<span title="${esc(tip)}">${money(Math.round(D.net))} dès ${monthName(addMonth(last.slice(0, 7), 1))}</span>` : ""); })()}
+      ${fig("À encaisser", money(S.unpaidTTC), S.unpaid.length ? S.unpaid.length === 1 && late ? `${esc(short(S.unpaid[0].clientName))}, <span class="neg">${lateText(S.unpaid[0].lateDays)}</span>` : `${S.unpaid.length} facture${S.unpaid.length > 1 ? "s" : ""}${late ? `, <span class="neg">${late} en retard</span>` : ""}` : "rien en attente")}
+    </div>
+    <div class="card">
+      <div class="lines">
+        ${tab("base", "Classique", S.runway, "var(--ink)", !cur, false)}
+        ${S.scenarios.map((sc, i) => tab(sc.id, sc.name, sc.runway, SC[i % SC.length], cur === sc, true, !sc.flows.length)).join("")}${noteTab}
+      </div>
+      <div id="plot"></div>
+      <table class="plan">
+        <colgroup><col>${cols.map(() => '<col class="m">').join("")}</colgroup>
+        <tr><th></th>${cols.map((m, i) => `<th class="n month ${i === col ? "hl" : ""}" data-c="${i}" data-col="${i}" title="${i === 0 ? "Ce qui reste à venir d'ici la fin du mois" : "Mettre ce mois en avant"}">${i === 0 ? "fin " : ""}${monthName(m.month)}${m.month.endsWith("-01") ? " " + m.month.slice(2, 4) : ""}</th>`).join("")}</tr>
+        ${line("En banque en fin de mois", cols.map((m) => m.balance), "", "", "sum")}
+        ${live ? line("En banque, classique", S.projection.slice(1, 8).map((m) => m.balance), "", "", "ref") : ""}
+        ${line("Variation du mois", cols.map((m, i) => m.balance - proj[i].balance), "", "", "var")}
+        ${cur ? `<tr class="grp"><td colspan="3">Hypothèses du scénario ${esc(cur.name)}</td><td class="keep" colspan="5">${!own.length ? "" : armed === cur.id ? `Passer ${own.length > 1 ? `ces ${own.length} hypothèses` : "cette hypothèse"} dans le classique ? <button class="link" data-action="hyp-keep-yes" data-n="${own.length}">Oui</button> · <button class="link" data-action="hyp-keep-no">Non</button>` : `<button class="link" data-action="hyp-keep">Tout passer dans le classique</button>`}</td></tr>` + own.map(ownLine).join("") + addLink("hyp-add", "Ajouter une hypothèse") : ""}
+        ${head("Chaque mois")}
+        ${line("Entrées récurrentes", cols.map((m) => m.in), "", "", "", `factures mensuelles, hors taxes ; en ${monthName(cols[0].month)}, seulement ce qui n'est pas encore facturé`)}
+        ${(() => { const seenOnce = S.vendors.filter((v) => v.recurring && !v.term && [...MM, S.now.slice(0, 7)].filter((m) => (v.byMonth[m] ?? 0) !== 0).length === 1).map((v) => v.name), list = seenOnce.length > 1 ? seenOnce.slice(0, -1).join(", ") + " et " + seenOnce.at(-1) : seenOnce[0];
+          return line("Dépenses habituelles", cols.map((m) => -m.out), "", "", "", `${money(Math.round(D.subscriptions))} d'abonnements à leur prix + ${money(Math.round(D.other))} d'autres dépenses, en moyenne ${/^[aeiouhéèà]/i.test(ML(MM[0])) ? "d'" : "de "}${ML(MM[0])} à ${ML(MM[MM.length - 1])} ; en ${new Date(cols[0].month + "-15").toLocaleDateString("fr-FR", { month: "short" })}, seulement ce qui reste${list ? ` · ${list} ${seenOnce.length > 1 ? "vus" : "vu"} une seule fois` : ""}`, false); })()}
+        ${baseMonthly.map(baseLine).join("")}
+        ${!cur && !baseOnce.length ? addLink("line-add", "Ajouter une ligne") : ""}
+        ${baseOnce.length ? head("Signé ou facturé") + baseOnce.map(baseLine).join("") : ""}
+        ${!cur && baseOnce.length ? addLink("line-add", "Ajouter une ligne") : ""}
+      </table>
+    </div>`;
+  },
+
+  clients() {
+    const total = S.clients.reduce((s, c) => s + c.invoicedHT, 0);
+    const nextD = (ks) => { const l = ks.filter((k) => k.remaining > 0 && k.expected[0]).sort((a, b) => a.expected[0].date < b.expected[0].date ? -1 : 1); return l.length ? `<span class="nw">vers le <span class="est">${day(l[0].expected[0].date)}</span></span>${l.length > 1 ? `<span class="nw"> et ${l.length - 1} autre${l.length > 2 ? "s" : ""}</span>` : ""}` : ""; };
+    // une ligne par client ; un contrat dont le client n'est pas connu garde la sienne, au nom de son client
+    const known = new Set(S.clients.map((c) => c.id));
+    const rows = [...S.clients.map((c) => ({ key: c.id, id: "cl-" + c.id, name: short(c.name), c, ks: S.contracts.filter((k) => k.clientId === c.id), unpaid: c.unpaidTTC, rest: c.contractsToCome, month: c.recurringHT, billed: c.invoicedHT, margin: c.marginMonthly, costs: c.costs, costsMonthly: c.costsMonthly, inv: S.invoices.filter((i) => i.clientId === c.id), lines: S.revenueLines.filter((l) => l.clientId === c.id) }))
+      .sort((a, b) => Number(b.unpaid > 0) - Number(a.unpaid > 0) || b.billed - a.billed),
+      ...S.contracts.filter((k) => !known.has(k.clientId)).map((k) => ({ key: "k:" + k.id, id: "cl-k:" + k.id, name: short(k.clientName), c: null, ks: [k], unpaid: 0, rest: k.remaining, month: k.monthly, billed: 0, margin: 0, costs: [], costsMonthly: 0, inv: [], lines: [] }))];
+    const sub = (id, cells, cls = "", attrs = "") => `<tr class="sub ${cls}" ${id ? `id="${esc(id)}"` : ""} ${attrs}>${[cells[0], cells[3], cells[2], cells[4], cells[1]].map((c, i) => `<td class="${i ? "n" : ""}">${c}</td>`).join("")}</tr>`;
+    const word = (st) => st ? ` ${st}` : "";
+    const subRows = (r) => {
+      const out = [];
+      const todayD = S.now.slice(0, 10);
+      // une facture entièrement rattachée à un contrat s'affiche sur la rangée du contrat, sauf si un de ses intitulés revient chaque mois
+      const recT = new Set(r.lines.filter((l) => l.recurring).map((l) => l.title)), owner = {};
+      for (const k of r.ks) for (const n of k.invoices) { const v = r.inv.find((i) => i.number === n); if (v && !(n in owner) && !v.items.some((x) => recT.has(x.title))) owner[n] = k.id; }
+      const unpaidN = (i) => S.unpaid.find((x) => x.number === i.number);
+      const etat = (i) => { const f = unpaidN(i); return f?.overdue ? `échue le <span class="neg" title="${lateText(f.lateDays)}">${day(f.due ?? i.due)}</span>` : etatFacture(i); };
+      for (const k of [...r.ks].sort((a, b) => Number(a.done) - Number(b.done))) {
+        const part = (nom, p, field) => p.amount ? `${ed("number", p.amount, nom, { kId: k.id, kField: field }, `${nom[0].toUpperCase() + nom.slice(1)} ${money(p.amount)} : cliquer pour modifier`)}${word(p.state)}` : "";
+        const bits = [part("acompte", k.deposit, "deposit"), part("solde", k.balance, "balance")].filter(Boolean);
+        const kin = k.invoices.map((n) => r.inv.find((i) => i.number === n)).filter(Boolean), mine = kin.filter((i) => owner[i.number] === k.id), mineUnpaid = mine.filter(unpaidN);
+        if (k.clientId) bits.push(`<button class="link" data-k-open="${esc(k.id)}" ${kin.length ? `title="${esc(kin.map((i) => `${i.items[0]?.title ?? ""} · ${etatFacture(i)}`).join("\n"))}"` : ""}>${kin.length ? `${esc(kin[0].number)}${kin.length > 1 ? ` et ${kin.length - 1} autre${kin.length > 2 ? "s" : ""}` : ""}` : "rattacher une facture"}</button>`);
+        out.push(sub("ct-" + k.id, [
+          `<span class="${k.done ? "dim" : ""}" style="font-size:13.5px;font-weight:550">${esc(k.name)}</span> ${k.toCheck ? `<span class="tag maybe" title="Lu par Claude dans ${esc(k.source ?? "le PDF")}">à vérifier</span> <button class="link" data-contract-ok="${esc(k.id)}">c'est juste</button>` : ""}${k.done ? '<span class="tag paid">terminé</span>' : ""}<button class="x gone" title="Retirer ce contrat" data-contract-del="${esc(k.id)}">×</button><span class="sub">${bits.join(" · ")}</span>`,
+          mineUnpaid.length ? `<span class="${mineUnpaid.some((i) => unpaidN(i).overdue) ? "neg" : ""}">${money(mineUnpaid.reduce((t, i) => t + i.ttc, 0))}</span>` : "",
+          `${money(k.remaining)}<span class="sub">${k.dueDate ? "fin le " : ""}${ed("date", k.dueDate, day(k.dueDate) + " " + (k.dueDate ?? "").slice(0, 4), { kId: k.id, kField: "dueDate" }, "Fin de mission estimée : clique pour la décaler")}${k.balance.left > 0 && k.dueDate && k.dueDate < todayD ? ' <span class="tag late">date dépassée</span>' : ""}</span>`,
+          `${ed("number", k.monthly, money(k.monthly), { kId: k.id, kField: "monthly" })}${k.monthly ? `<span class="sub">dès le ${ed("date", k.monthlyStart, day(k.monthlyStart), { kId: k.id, kField: "monthlyStart" })}</span>` : ""}`,
+          mine.length ? money(mine.reduce((t, i) => t + i.ht, 0)) : ""], k.done ? "dimrow" : "", mine.length ? `data-inv="${esc(mine.map((i) => i.number).join(" "))}"` : ""));
+        if (openK.has(k.id) && k.clientId) out.push(`<tr class="sub"><td colspan="5"><div class="pills"><span>Factures de ce contrat :</span>${S.invoices.filter((i) => i.clientId === k.clientId).map((i) => `<button class="pill ${k.invoices.includes(i.number) ? "on" : ""}" data-contract-inv="${esc(k.id)}" data-number="${esc(i.number)}" title="${esc(i.items[0]?.title ?? "")}, ${etatFacture(i)}">${esc(i.number)} · ${money(i.ht)}</button>`).join("")}</div></td></tr>`);
+      }
+      // une rangée par intitulé facturé : « chaque mois » est une propriété de l'intitulé
+      const newest = (a, b) => a.issue < b.issue ? 1 : a.issue > b.issue ? -1 : a.number < b.number ? 1 : -1;
+      const lines = [...r.lines.filter((l) => l.recurring), ...r.lines.filter((l) => !l.recurring).sort((a, b) => a.lastIssue < b.lastIssue ? 1 : -1)];
+      const alone = lines.length === 1 && !r.ks.length && !r.costs.length;
+      const usedIds = new Set();
+      const sw = (l, fresh) => l.recurring ? `<span class="rev"><input type="checkbox" class="switch" title="${esc(l.title)} : revient chaque mois" checked data-revenue="${esc(l.key)}"><span class="m">${money(l.ht)}</span></span>` : cfgAsked(l.key) ? "" : askRev === l.key ? `<span class="ask-yn">Compter ${money(l.ht)} chaque mois ? <button class="link" data-rev-yes="${esc(l.key)}">Oui</button> · <button class="link" data-rev-no="${esc(l.key)}">Non</button></span>` : `<button class="link ask-rev ${fresh ? "on" : ""}" data-rev-ask="${esc(l.key)}" title="${esc(l.title)} : revient chaque mois ?">chaque mois ?</button>`;
+      for (const l of lines) {
+        const invs = r.inv.filter((i) => !owner[i.number] && i.items.some((x) => x.title === l.title)).sort(newest);
+        if (!invs.length) continue;
+        const spelled = invs.find((i) => S.unpaid.some((x) => x.number === i.number)) ?? invs[0];
+        const others = invs.filter((i) => i !== spelled);
+                const tip = invs.map((i) => `${i.number} · ${etatFacture(i)}`).join("\n"), fresh = [S.now.slice(0, 7), prevMonth(S.now)].includes(l.lastIssue.slice(0, 7));
+        const unpaidHere = r.inv.filter((i) => !owner[i.number] && i.items[0]?.title === l.title && S.unpaid.some((x) => x.number === i.number));
+        const id = "inv-" + invs[0].number;
+        out.push(sub(usedIds.has(id) ? "" : id, [
+          `${esc(l.title)}<span class="sub">${esc(spelled.number)} · ${etat(spelled)}${others.length ? ` · <span title="${esc(tip)}">et ${others.length} autre${others.length > 1 ? "s" : ""}</span>` : ""}</span>`,
+          alone ? "" : unpaidHere.length ? `<span class="${unpaidHere.some((i) => S.unpaid.find((x) => x.number === i.number)?.overdue) ? "neg" : ""}">${money(unpaidHere.reduce((t, i) => t + i.ttc, 0))}</span>` : "",
+          "", sw(l, fresh), alone ? "" : money(invs.reduce((t, i) => t + i.items.filter((x) => x.title === l.title).reduce((u2, x) => u2 + x.ht, 0), 0))], "", `data-inv="${esc(invs.map((i) => i.number).join(" "))}"`));
+        usedIds.add(id);
+      }
+      for (const x of r.costs) out.push(sub("", [`${esc(x.name)}<span class="sub">coût rattaché</span>`, "", "", `−${money(x.monthly)}`, ""]));
+      if (out.length) out[out.length - 1] = out[out.length - 1].replace('class="sub ', 'class="sub last ');
+      return out.join("");
+    };
+    const row = (r) => `<tr class="crow" id="${esc(r.id)}" data-c-open="${esc(r.key)}"><td class="name"><span class="chev ${openC.has(r.key) ? "open" : ""}" role="button" tabindex="0" aria-expanded="${openC.has(r.key)}" aria-label="Ouvrir ${esc(r.name)}">›</span>${esc(r.name)}</td>
+        <td class="n" ${r.costs.length ? `title="${esc(r.costs.map((x) => `${x.name} ${money(x.monthly)} par mois`).join(", "))}"` : ""}>${r.month ? money(r.month) : ""}${r.month || r.costsMonthly ? `<span class="sub">marge ${signed(r.margin)}</span>` : ""}</td>
+        <td class="n">${r.rest ? money(r.rest) : ""}${r.rest && !openC.has(r.key) && nextD(r.ks) ? `<span class="sub">${nextD(r.ks)}</span>` : ""}</td>
+        <td class="n">${r.billed ? money(r.billed) : ""}</td>
+        <td class="n ${r.unpaid ? "neg" : ""}">${r.unpaid ? money(r.unpaid) : ""}${r.c && S.unpaid.some((i) => i.clientId === r.c.id && i.overdue) ? `<span class="sub neg">en retard</span>` : ""}</td></tr>
+      ${openC.has(r.key) ? subRows(r) : ""}`;
+    const { M, base, lines, pipeSet, setToCome } = revData(), last = M.length - 1, pipe = pipeRows();
+    const ends = lines.map((x) => x.rec[last]), lo = Math.min(...ends), hi = Math.max(...ends), pipeSetAll = pipeSet.reduce((a, b) => a + b, 0);
+    const when = (f) => `${f.monthly ? "dès " : "en "}${monthName(f.date.slice(0, 7))}${f.date.slice(0, 4) !== S.now.slice(0, 4) ? " " + f.date.slice(2, 4) : ""}`;
+    const amount = (f, on) => on ? `${money(f.amount)}<span class="sub">${when(f)}${f.monthly && f.count ? `, ${f.count} mois` : ""}</span>` : "";
+    const signedRows = S.planned.filter((p) => p.revenue && (p.monthly || !p.past)).map((p) => { const f = { ...p, amount: p.kind === "in" ? p.amount : -p.amount };
+      return `<tr><td class="name">${esc(p.label)}<button class="x" title="Retirer cette ligne" data-planned-del="${esc(p.id)}" data-label="${esc(p.label)}">×</button><span class="sub">signé, pas encore facturé</span></td><td class="n">${amount(f, p.revenue === "recurring")}</td><td class="n">${amount(f, p.revenue === "setup")}</td><td></td><td></td></tr>`; }).join("");
+    return `
+    <h1>Clients et contrats</h1>
+    <div class="hero eq">
+      ${fig("Récurrent chaque mois, HT", money(S.recurringIn), "signé", "big")}
+      ${fig("Avec ce qui est en discussion", lines.length ? (lo === hi ? money(hi) : `${money(lo)} <small>à</small> ${money(hi)}`) : '<span class="dim">rien</span>', lines.length ? `par mois, en ${monthName(M[last])}` : "aucune piste de récurrent")}
+      ${fig("Mise en place à venir, HT", money(setToCome), pipeSetAll ? `et <span class="est">${money(pipeSetAll)}</span> en discussion` : nextD(S.contracts) || "rien à venir")}
+    </div>
+    <div class="card">
+      <div class="legend"><span><i style="width:16px;border-top:2.2px solid var(--ink)"></i>Récurrent chaque mois</span><span><i style="width:9px;height:12px;border-radius:2px;background:var(--blue);opacity:.5"></i>Mise en place du mois</span><span><i style="width:16px;border-top:2px dashed var(--muted)"></i>En discussion, pas encore signé</span></div>
+      <div id="plot-ca"></div>
+    </div>
+    ${pdfNote ? `<div class="panel ${pdfNote.error ? "alert" : ""}" style="display:flex;gap:10px;align-items:baseline"><div style="flex:1">${esc(pdfNote.text)}</div><button class="x" data-action="pdf-close" title="Fermer">×</button></div>` : ""}
+    ${card("Signé", `${S.clients.length} clients · ${money(total)} facturés HT`, reading ? `<span class="thinking">Claude lit ${esc(reading)}</span>` : `<button class="btn" data-action="add-toggle">${showAdd ? "Annuler" : "Ajouter un contrat"}</button>`,
+      `${showAdd ? `<div class="body"><div class="form bare">
+          <select id="k-client" aria-label="Client">${S.clients.map((c) => `<option value="${esc(c.id)}">${esc(short(c.name))}</option>`).join("")}</select>
+          <input id="k-name" placeholder="Nom de la mission"><input id="k-deposit" type="number" min="0" step="100" placeholder="Acompte HT" style="width:120px"><input id="k-balance" type="number" min="0" step="100" placeholder="Solde HT" style="width:120px">
+          <span class="grp-end"><span class="dim">fin le</span><input id="k-due" type="date" title="Fin de mission estimée"><input id="k-monthly" type="number" min="0" step="50" placeholder="Par mois HT" style="width:120px"><button class="btn" data-action="contract">Ajouter</button>
+          <label class="link" title="Claude lit le contrat et remplit l'acompte, le solde et le récurrent. Tu peux aussi déposer le fichier sur cette carte."><input type="file" id="pdf" accept="application/pdf,.pdf" hidden ${reading ? "disabled" : ""}>depuis un PDF</label></span></div></div>` : ""}
+      <div class="scroll"><table class="clients">
+        <colgroup><col style="width:40%"><col style="width:15%"><col style="width:18%"><col style="width:12%"><col style="width:15%"></colgroup>
+        <tr><th>Client</th><th class="n">Chaque mois HT</th><th class="n">Reste à facturer HT</th><th class="n">Facturé HT</th><th class="n">À encaisser TTC</th></tr>
+        ${rows.map(row).join("")}${signedRows}
+      </table></div>`, 'id="drop"')}
+    ${card("En discussion", pipe.length ? plural(pipe.length, "piste") : "", `<button class="btn" data-action="pipe-add">Ajouter une piste</button>`,
+      pipe.length ? `<div class="scroll"><table class="clients">
+        <colgroup><col style="width:40%"><col style="width:15%"><col style="width:18%"><col style="width:27%"></colgroup>
+        <tr><th>Piste</th><th class="n">Chaque mois HT</th><th class="n">Mise en place HT</th><th></th></tr>
+        ${pipe.map((r) => `<tr><td class="name">${esc(r.f.label)}<span class="sub">${r.where.map((x) => `<i class="sq" style="background:${x.color}"></i>${esc(x.name)}`).join(" · ")}</span></td>
+          <td class="n">${amount(r.f, r.f.revenue === "recurring")}</td><td class="n">${amount(r.f, r.f.revenue === "setup")}</td>
+          <td class="n"><button class="link" title="C'est signé : la piste passe dans le signé, partout" data-flow-ok="${r.i}" data-sc="${esc(r.sc)}" data-label="${esc(r.f.label)}" data-n="1">C'est signé</button> · <button class="link" title="Retirer cette piste de tous les scénarios" data-flow-del="${r.i}" data-sc="${esc(r.sc)}" data-all="1" data-label="${esc(r.f.label)}" data-n="1">Retirer</button></td></tr>`).join("")}
+      </table></div>` : `<div class="empty">Rien en discussion. Écris dans la barre du bas, par exemple « on devrait signer 12 000 € en janvier, puis 1 500 € par mois ».</div>`)}`;
+  },
+
+  depenses() {
+    return `<h1>Dépenses</h1>
+    <div class="seg"><button class="${sub === "abonnements" ? "on" : ""}" data-sub="abonnements">Par fournisseur</button><button class="${sub === "aws" ? "on" : ""}" data-sub="aws">AWS et crédits</button></div>
+    ${views[sub]()}`;
+  },
+
+  abonnements() {
+    const D = S.drivers, T = D.terms ?? [], eng = T.reduce((t, x) => t + x.monthly, 0), MM = S.measuredMonths, DM = D.months ?? [];
+    const cents = (n) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(n);
+    const abos = S.vendors.filter((v) => v.recurring && !v.term).sort((a, b) => b.monthly - a.monthly);
+    const engs = S.vendors.filter((v) => v.term > 0);
+    const seen = (v) => [...MM, S.now.slice(0, 7)].some((m) => (v.byMonth[m] ?? 0) !== 0);
+    const nowM = S.now.slice(0, 7), paid = (v) => v.byMonth[nowM] ?? 0;
+    const excs = S.vendors.filter((v) => v.exceptional && seen(v));
+    const once = S.vendors.filter((v) => !v.recurring && !v.term && !v.exceptional).sort((a, b) => ((paid(b) !== 0) - (paid(a) !== 0)) || (paid(a) !== 0 && paid(b) - paid(a)) || (seen(b) - seen(a)) || (b.average - a.average) || (a.last < b.last ? 1 : -1));
+    const lastM = MM[MM.length - 1], cols = [...MM, S.now.slice(0, 7)], curI = cols.length - 1;
+    const client = (v) => ed("client", v.client ?? "", "pour " + esc(clientName(v.client)), { vendorClient: v.key }, "Client auquel rattacher ce coût", "client");
+    const term = (v) => ed("number", v.term, v.termLeft > 0 ? `encore ${v.termLeft} sur ${v.term}` : `terminé, ${v.paidCount} sur ${v.term}`, { vendorTerm: v.key }, "Nombre total de paiements si l'engagement a une fin (6 pour « pendant six mois »)", "durée");
+    const sw = (v, on) => `<input type="checkbox" class="switch" ${on ? "checked" : ""} data-vendor-recurring="${esc(v.key)}" aria-label="${on ? "Compté comme abonnement" : "Compter comme abonnement"}" ${v.term && on ? 'disabled title="Compté jusqu\'à la dernière mensualité"' : ""}>`;
+    const amt = (x, cls = "") => x ? `<td class="n ${cls}" title="${cents(x)}">${money(Math.round(x))}</td>` : `<td class="n dim ${cls}">·</td>`;
+    const sums = (vals, avg, o = {}) => vals.map((x, i) => amt(x, i === curI ? "cur" : "")).join("") + `<td class="n ${o.cls ?? ""}" title="${esc(o.title ?? cents(avg))}">${money(Math.round(avg))}</td>`;
+    const tip = (v) => v.category || "sans catégorie";
+    const once1 = (v) => [...MM, S.now.slice(0, 7)].filter((m) => (v.byMonth[m] ?? 0) !== 0).length === 1;
+    const due = (v) => v.nextDue ? `<span title="prochain prélèvement, date supposée d'après le dernier">le ${day(v.nextDue)}</span>` : "";
+    const price = (v) => `<td class="n ${once1(v) ? "est" : ""}" title="${esc(once1(v) ? "vu une seule fois : à confirmer au prochain prélèvement · " + cents(v.monthly) : cents(v.monthly))}">${money(Math.round(v.monthly))}</td>`;
+    const row = (v, isAbo, isEng) => {
+      const last = v.byMonth[lastM] ?? 0, all = MM.every((m) => (v.byMonth[m] ?? 0) > 0);
+      const red = isAbo && all && last > v.average * 1.5;
+      const never = !seen(v) ? `<span class="ex">dernière fois le ${day(v.last)}</span>` : "";
+      return `<tr${isEng ? ' class="eng"' : ""}><td class="name"><div class="nm"><span class="vn" title="${esc(tip(v))}">${esc(v.name)}</span>${never}<span class="ex">${isAbo || isEng ? due(v) : ""}${client(v)}${term(v)}${isAbo || isEng ? "" : `<button class="link exc" data-vendor-exc="${esc(v.key)}" data-on="${v.exceptional ? "" : 1}" title="${v.exceptional ? "Recompter cette dépense dans la moyenne" : "Cette dépense ne se répétera pas : la sortir de la moyenne"}">${v.exceptional ? "remettre dans la moyenne" : "exceptionnel"}</button>`}</span></div></td>`
+        + cols.map((m, i) => amt(v.byMonth[m] ?? 0, (i === curI ? "cur " : "") + (red && i === curI - 1 ? "neg" : ""))).join("")
+        + (isEng ? `<td class="n" title="${cents(v.monthly)}">${money(Math.round(v.monthly))}</td>` : isAbo ? price(v) : v.exceptional ? amt(0) : amt(v.average))
+        + (isEng || v.exceptional ? "<td></td>" : `<td class="n">${sw(v, isAbo)}</td>`) + "</tr>";
+    };
+    const n = norm(q), hitQ = matcher(q, ![...abos, ...engs, ...once, ...excs].some((v) => matcher(q)(v.name))), match = (v) => !n || hitQ(v.name);
+    const shownA = abos.filter(match), shownE = engs.filter(match), shown = once.filter(match), shownX = excs.filter(match);
+    const cut = n || allOnce === "once" ? shown : shown.slice(0, Math.max(8, once.filter((v) => paid(v) !== 0).length));
+    const grp = (label, count, cells) => `<tr class="g"><td>${label}${count !== "" ? ` <span class="count">${count}</span>` : ""}</td>${cells}</tr>`;
+    const blank = "<td></td>".repeat(cols.length + 2);
+    const none = !shownA.length && !shownE.length && !shown.length && !shownX.length;
+    const mth = (m, i) => `<th class="n ${i === curI ? "cur" : ""}"${i === curI ? ` title="mois en cours, au ${day(S.now)}"` : ""}>${monthName(m)}</th>`;
+    const range = (() => { const L = (m) => new Date(m + "-15").toLocaleDateString("fr-FR", { month: "long" }); return `moyenne ${/^[aeiouhéèà]/i.test(L(MM[0])) ? "d'" : "de "}${L(MM[0])} à ${L(lastM)}`; })();
+    const last = T.map((x) => x.end).sort().pop();
+    const names = T.map((x) => money(x.monthly) + " de " + x.name);
+    const total = Math.round(D.baseOut + eng), ot = onceTip(D), uo = ot ? { title: ot } : {}, uw = (t) => ot ? `<span title="${esc(ot)}">${t}</span>` : t;
+    const subM = abos.reduce((t, v) => t + v.monthly, 0);
+    const tipAll = `${money(Math.round(D.baseOut))} de dépenses habituelles + ${T.map((x) => money(x.monthly) + " de " + x.name).join(" + ")}`;
+    const nextT = T.length === 1 ? engs.find((v) => v.name === T[0].name)?.nextDue : "";
+    const figs = T.length ? [
+      fig("Chaque mois", `<span title="${esc(tipAll + (ot ? " · " + ot : ""))}">${money(total)}</span>`, last ? `<span title="${esc(tipAll)}">${money(Math.round(D.baseOut))} dès ${monthName(addMonth(last.slice(0, 7), 1))}, après ${T.length === 1 ? esc(T[0].name) : "les engagements"}</span>` : "", "big"),
+    ] : [fig("Chaque mois", uw(money(Math.round(D.baseOut))), "", "big")];
+    const engRows = !engs.length ? "" : n ? shownE.map((v) => row(v, false, true)).join("")
+      : (engs.length > 1 ? `<tr class="eng"><td class="name">Engagements</td>${sums(cols.map((m) => engs.reduce((t, v) => t + (v.byMonth[m] ?? 0), 0)), eng)}<td></td></tr>` : "") + engs.map((v) => row(v, false, true)).join("");
+    return `
+    <div class="hero">${figs.join("")}</div>
+    <div class="card"><table class="sp">
+      <colgroup><col>${cols.map(() => '<col class="m">').join("")}<col class="a"><col class="s"></colgroup>
+      <tr><th><label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="q" placeholder="Chercher un fournisseur" value="${esc(q)}" autocomplete="off"></label></th>${cols.map(mth).join("")}<th class="n" title="${esc("ce que le plan compte : les abonnements à leur prix, le reste en " + range)}">Par mois</th><th class="n">Abonnement</th></tr>
+      ${engRows}
+      ${n ? "" : `<tr class="sum"><td class="name">Dépenses habituelles</td>${sums(DM.map((m) => m.habitual), D.baseOut, uo)}<td></td></tr>`}
+      ${n ? "" : grp("Abonnements", "", sums(DM.map((m) => m.subscriptions), subM, uo) + "<td></td>")}
+      ${shownA.map((v) => row(v, true)).join("")}
+      ${n ? "" : grp("Autres dépenses", once.length, sums(DM.map((m) => m.other), D.other) + "<td></td>")}
+      ${cut.map((v) => row(v, false)).join("")}
+      ${cut.length < shown.length ? `<tr><td colspan="7"><button class="link" data-action="all-once">Voir les ${shown.length - cut.length} autres</button></td></tr>` : ""}
+      ${n || !excs.length ? "" : grp("Exceptionnel, hors moyenne", excs.length, DM.map((m, i) => amt(m.exceptional, i === curI ? "cur" : "")).join("") + '<td class="n dim">·</td><td></td>')}
+      ${shownX.map((v) => row(v, false)).join("")}
+      ${none ? `<tr><td colspan="7" class="dim">Aucun fournisseur pour « ${esc(q)} ».</td></tr>` : ""}
+    </table></div>`;
+  },
+
+  aws() {
+    const a = S.aws, limit = S.config.awsDailyLimit ?? 50, credits = S.config.credits ?? [];
+    const price = `environ ${(S.awsRequests * 0.01).toFixed(2).replace(".", ",")} $`;
+    const read = `<button class="btn" data-action="aws" ${busy ? "disabled" : ""}>${a?.daily ? "Relire AWS" : "Lire AWS"} (${price})</button>`;
+    const login = `<button class="btn dark" data-action="aws-login" ${busy ? "disabled" : ""}>Se connecter à AWS et lire (${price})</button>`;
+    const usd = (n) => money(n, "USD"), dash = (t) => `<span class="est">${t}</span>`;
+    const daysLeft = (c) => Math.ceil((Date.parse(c.expires) - Date.now()) / 864e5);
+    const tagLeft = (c) => { const left = daysLeft(c); return isNaN(left) ? "" : `<span class="tag ${left < 60 ? "late" : ""}">${left < 0 ? "expiré" : left + " jour" + (left > 1 ? "s" : "")}</span>`; };
+    const usedAll = a?.monthly?.length ? a.monthly.reduce((t, m) => t + (m.credits ?? 0), 0) : null, sinceM = a?.monthly?.length ? monthLong(a.monthly[0].month).split(" ")[0].toLowerCase() : "";
+    const first = [...credits].sort((x, y) => (Date.parse(x.expires) || 9e15) - (Date.parse(y.expires) || 9e15))[0];
+    const creditV = first ? `<span class="toggle" data-action="credits-toggle" role="button" tabindex="0" title="Voir ou modifier les crédits${usedAll != null ? ` · ${usd(usedAll)} utilisés depuis ${sinceM}` : ""}">${esc(first.amount)}</span>` : "";
+    const creditS = first ? `${first.expires ? "jusqu'au " + longDay(first.expires) + " " : ""}${tagLeft(first)}${credits.length > 1 ? ` et ${credits.length - 1} autre${credits.length > 2 ? "s" : ""} programme${credits.length > 2 ? "s" : ""}` : ""}` : "";
+    const creditFig = first ? fig("Crédits restants", creditV, creditS) : usedAll != null ? fig("Crédits utilisés", usd(usedAll), `depuis ${sinceM} · <button class="link" data-action="credits-toggle">indiquer le reste</button>`) : "";
+    const creditZone = !showCredits ? "" : `<div class="zone"><table class="flat">${credits.length ? `<tr><th>Programme</th><th>Fin</th><th>Reste</th><th class="n">Montant</th><th></th></tr>` : ""}${credits.map((c, i) => `<tr><td class="name"${c.note ? ` title="${esc(c.note)}"` : ""}>${esc(c.name)}</td><td>${c.expires ? longDay(c.expires) : ""}</td><td>${tagLeft(c)}</td><td class="n">${esc(c.amount)}</td><td class="n"><button class="x" title="Retirer" data-credit-del="${i}">×</button></td></tr>`).join("")}</table>
+      <div class="form bare"><label class="fl" style="flex:2">Programme<input id="c-name" placeholder="Crédits AWS"></label><label class="fl" style="flex:1">Montant restant<input id="c-amount" placeholder="5 000 $"></label><label class="fl">jusqu'au<input id="c-expires" type="date" title="Date de fin"></label><button class="btn" data-action="credit">Ajouter</button></div></div>`;
+    let body;
+    if (!a?.daily) {
+      body = `<div class="panel"><p>${a?.error ? `AWS a refusé la lecture : <b>${esc(a.error)}</b>` : "AWS n'a pas encore été lu. La lecture utilise la session <code>aws</code> de ce Mac et ne modifie rien dans ton compte."}</p>
+        ${a?.error ? login + " " : ""}${read}${busy && awsLogin ? '<p style="margin:12px 0 0">Une page AWS s\'est ouverte dans ton navigateur. Valide la connexion avec ton utilisateur habituel (pas le compte racine) : la lecture se lance ensuite toute seule.</p>' : ""}</div>
+      ${first ? `<div class="hero">${fig("Crédits restants", creditV, creditS, "big")}</div>` : `<p style="margin:14px 0 0"><button class="link" data-action="credits-toggle">indiquer les crédits restants</button></p>`}${creditZone}`;
+    } else {
+      const month = S.now.slice(0, 7), days = a.daily, cur = a.monthly?.find((m) => m.month === month);
+      const yesterday = days.at(-2) ?? days.at(-1), peak = days.reduce((p, d) => (d.total > p.total ? d : p), days[0]);
+      const services = {};
+      for (const d of days.filter((d) => d.date.startsWith(month))) for (const [k, v] of Object.entries(d.services)) services[k] = (services[k] ?? 0) + v;
+      const over = days.filter((d) => d.total > limit), max = Math.max(...days.map((d) => d.total), limit, 1) * 1.1;
+      const w = Math.max((document.getElementById("main")?.clientWidth ?? 1080) - 42, 480), h = 200, padL = 56, padB = 26, top = 10, stepX = (w - padL) / days.length, y = (v) => top + (h - padB - top) * (1 - v / max);
+      const anyBilled = (a.monthly ?? []).some((m) => m.billed > 0), billed = cur?.billed ?? 0, used = cur?.usage ?? 0, cov = cur?.credits ?? 0;
+      const prev = a.monthly?.find((m) => m.month === addMonth(month, -1)), fc = a.forecast == null ? "" : `<span class="est" title="d'ici la fin du mois">+${usd(a.forecast)} prévus</span>`;
+      const consoS = [prev ? `${usd(prev.usage)} en ${monthLong(prev.month).split(" ")[0].toLowerCase()}` : "", fc].filter(Boolean).join(" · ") || dash("pas assez d'historique");
+      body = `
+      ${a.error ? `<div class="panel"><p>Dernière lecture refusée : <b>${esc(a.error)}</b> Les chiffres ci-dessous datent de ${ago(a.fetchedAt)}.</p>${login}</div>` : ""}
+      ${over.length ? `<div class="panel alert"><b>Seuil dépassé ${over.length} jour${over.length > 1 ? "s" : ""} sur 30.</b> Dernier dépassement le ${day(over.at(-1).date)} : ${usd(over.at(-1).total)}.</div>` : ""}
+      <div class="hero eq">
+        ${fig(`Facturé en ${monthLong(month).split(" ")[0].toLowerCase()}`, usd(billed), billed > 0 ? `${usd(used)} consommés, ${usd(cov)} couverts par les crédits` : "couvert par les crédits", "big")}
+        ${fig(`Consommé en ${monthLong(month).split(" ")[0].toLowerCase()}`, usd(used), consoS)}
+        ${creditFig}
+      </div>
+      ${creditZone}
+      ${card("Consommation", `<span class="${yesterday.total > limit ? "neg" : ""}">${day(yesterday.date)} : ${usd(yesterday.total)}</span> · pic ${usd(peak.total)} le ${day(peak.date)}`, `<button class="link" data-action="aws" ${busy ? "disabled" : ""}>${a?.daily ? "Relire AWS" : "Lire AWS"} (${price})</button>`, `<div class="body"><svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Dépense AWS par jour sur 30 jours">
+        <text x="${padL - 10}" y="${y(max / 1.1) + 4}" text-anchor="end">${usd(max / 1.1)}</text><line x1="${padL}" x2="${w}" y1="${h - padB}" y2="${h - padB}" stroke="var(--rule-strong)"/>
+        ${days.map((d, i) => `<rect x="${padL + i * stepX + 2}" y="${y(d.total)}" width="${Math.max(stepX - 4, 1)}" height="${Math.max(h - padB - y(d.total), 1)}" fill="${d.total > limit ? "var(--red)" : "var(--blue)"}" rx="2"><title>${day(d.date)} : ${usd(d.total)}</title></rect>${i % 7 === 0 ? `<text x="${padL + i * stepX}" y="${h - 8}">${day(d.date)}</text>` : ""}`).join("")}
+        <line x1="${padL}" x2="${w}" y1="${y(limit)}" y2="${y(limit)}" stroke="var(--red)" stroke-dasharray="4 4"/></svg>
+        <div class="pair"><div><h3>Par service, en ${monthLong(month).split(" ")[0].toLowerCase()}</h3><table class="flat">${Object.entries(services).sort((x, y) => y[1] - x[1]).map(([k, v]) => `<tr><td class="name">${esc(k)}</td><td class="n">${usd(v)}</td></tr>`).join("") || '<tr><td class="dim">Aucune consommation ce mois.</td></tr>'}</table></div>
+        <div><h3>Par mois${anyBilled ? "" : ", rien de facturé"}</h3><table class="flat"><tr><th>Mois</th><th class="n">Consommé</th>${anyBilled ? '<th class="n">Facturé</th>' : ""}</tr>${[...(a.monthly ?? [])].reverse().map((m) => `<tr><td>${monthName(m.month)}</td><td class="n">${usd(m.usage)}</td>${anyBilled ? `<td class="n">${usd(m.billed)}</td>` : ""}</tr>`).join("")}</table></div></div></div>`)}`;
+    }
+    return `${body}
+    <h2 class="sec">Alertes</h2>
+    <table class="flat alerts">
+      <tr><td class="name">Seuil par jour<span class="sub">dans l'application</span></td><td class="n">${ed("number", limit, usd(limit), { limit: 1 }, "Seuil d'alerte par jour, en dollars")}</td></tr>
+      ${(a?.budgets ?? []).map((b) => `<tr><td class="name">${esc(b.name)}<span class="sub">budget mensuel AWS, ${usd(b.spent)} comptés ce mois</span></td><td class="n">${usd(b.limit)}</td></tr>`).join("")}
+      ${(a?.monitors ?? []).map((m) => `<tr><td class="name">${esc(m.name)}<span class="sub">détection d'anomalies</span></td><td class="n"><span class="tag paid">actif</span></td></tr>`).join("")}
+      ${a?.guardsNote ? `<tr><td colspan="2">${esc(a.guardsNote)}</td></tr>` : ""}
+      <tr><td colspan="2">${showGuards ? `<div class="form bare"><input id="g-email" type="email" placeholder="Courriel qui reçoit les alertes" style="flex:2"><input id="g-amount" type="number" min="1" step="10" placeholder="Plafond mensuel en $" style="width:190px"><button class="btn" data-action="guards" ${busy ? "disabled" : ""} title="Crée un budget mensuel avec alertes à 50, 80 et 100 % (crédits non comptés) et la détection d'anomalies. Gratuit ; prévient avec quelques heures de retard, ne coupe rien.">Créer</button></div>` : `<button class="link" data-action="guards-toggle">Créer un plafond mensuel avec alertes</button>`}</td></tr>
+    </table>`;
+  },
+};
+
+// ───── discussion ─────
+function renderTalk() {
+  const el = document.getElementById("talk");
+  document.getElementById("hist").classList.toggle("on", showHistory);
+  if (showHistory && !thinking) {
+    const list = [...(S?.chats ?? [])].reverse();
+    el.hidden = false; el.style.height = "auto";
+    el.innerHTML = '<button class="x close" title="Fermer" data-action="hist-close">×</button><div style="font-weight:600;margin-bottom:6px">Discussions précédentes</div>'
+      + (list.map((c) => `<div class="past" data-chat-open="${esc(c.id)}"><span class="grow" data-chat-open="${esc(c.id)}">${esc(c.title)}</span><small>${ago(c.updated ?? c.at)} · ${c.turns.length} réponse${c.turns.length > 1 ? "s" : ""}</small><button class="x" title="Supprimer cette discussion" data-chat-del="${esc(c.id)}">×</button></div>`).join("") || '<div class="dim">Aucune discussion pour l\'instant.</div>');
+    return;
+  }
+  el.hidden = !log.length && !thinking;
+  // seulement les réponses de Claude ; la dernière remplit le carré, les précédentes sont au-dessus en remontant
+  el.innerHTML = '<button class="x close" title="Fermer cette discussion" data-action="talk-close">×</button>' + log.map((t, i) => `<div class="turn ${i === log.length - 1 && !thinking ? "last" : "old"}">
+    ${t.error ? `<div class="err">${esc(t.error)}</div>` : `<div>${esc(t.reply)}</div>${t.done.map((d) => `<div class="did">${esc(d)}</div>`).join("")}${t.done.length && !t.undone && !t.stale && i === log.length - 1 ? '<button class="link" style="margin-top:8px" data-action="undo">Annuler ces changements</button>' : ""}${t.undone ? '<div class="dim" style="font-size:12.5px;margin-top:6px">Changements annulés.</div>' : ""}`}</div>`).join("")
+    + (thinking ? '<div class="turn last"><div class="thinking dim">Claude regarde tes chiffres</div></div>' : "");
+  const last = el.querySelector(".turn.last");
+  if (last) { el.style.height = Math.min(last.offsetHeight + 30, 230) + "px"; el.scrollTop = last.offsetTop - 14; }
+  document.getElementById("send").disabled = !!thinking;
+}
+
+function render() {
+  if (askSeed && askSeedFor !== undefined && (sel?.kind === "scenario" ? sel.id : null) !== askSeedFor) unseed();
+  const tab = TABS[location.hash.slice(1)] ? location.hash.slice(1) : "tresorerie";
+  const nLate = S ? S.unpaid.filter((i) => i.overdue).length : 0, lateTip = nLate === 1 ? "1 facture en retard" : `${nLate} factures en retard`;
+  document.getElementById("nav").innerHTML = Object.entries(TABS).map(([k, v]) => `<a href="#${k}" class="${k === tab ? "on" : ""}"><svg viewBox="0 0 24 24">${ICON[k]}</svg><span class="label">${v}</span>${k === "clients" && nLate ? `<span class="count label neg" title="${lateTip}">${nLate}</span>` : ""}</a>`).join("");
+  if (!S) return;
+  const live = S.qontoConnected, C = S.claude, me = C.accounts.find((a) => a.id === C.account);
+  document.getElementById("sources").innerHTML = `
+    <div class="source"><span class="dot ${live ? "ok" : ""}"></span><div>${live ? "Qonto connecté" : "Copie de Qonto"}<small>${busy ? "lecture en cours…" : ago(S.fetchedAt)} · ${live ? `<button class="link" data-action="refresh" ${busy ? "disabled" : ""}>mettre à jour</button>` : `<button class="link" data-action="key-toggle">connecter</button>`}</small></div></div>
+    <div class="source"><span class="dot ${S.aws?.daily ? (S.aws.error ? "bad" : "ok") : ""}"></span><div>AWS<small>${S.aws?.daily ? ago(S.aws.fetchedAt) : "pas encore lu"}</small></div></div>
+    <div class="source"><span class="dot ${me?.ok ? "ok" : "bad"}"></span><div style="min-width:0;flex:1">Claude Code
+      <select id="acct" aria-label="Abonnement Claude utilisé" title="Abonnement Claude utilisé">${me?.ok ? "" : '<option selected disabled>compte non connecté</option>'}${C.accounts.filter((a) => a.ok).map((a) => `<option value="${esc(a.id)}" ${a.id === C.account ? "selected" : ""}>${esc(a.email ?? "Compte de ce Mac")}</option>`).join("")}<option value="+">Ajouter un compte…</option>${C.account !== "mac" ? '<option value="-">Retirer ce compte</option>' : ""}</select>
+      <small>${me?.plan ? "abonnement " + esc(me.plan) : ""}</small></div></div>`;
+  const label = (m) => m.replace("claude-", "").replace(/^(\w)(\w*)-(\d+)-(\d+)$/, (_, a, b, x, y) => `${a.toUpperCase()}${b} ${x}.${y}`);
+  document.getElementById("pick").innerHTML = `<select id="model" aria-label="Modèle" title="Modèle qui répond">${C.models.map((m) => `<option value="${m}" ${m === C.model ? "selected" : ""}>${label(m)}</option>`).join("")}</select>`;
+  const box = document.getElementById("account"), code = document.getElementById("code")?.value ?? "";
+  box.hidden = !C.pending && !C.note;
+  box.innerHTML = C.pending ? `<div><b>Une page Claude s'est ouverte dans ton navigateur.</b> Connecte-toi avec le compte à ajouter. Si le navigateur est déjà connecté à un autre compte, change de compte sur claude.ai avant de valider.</div>
+      <div class="form" style="margin-top:10px"><input id="code" placeholder="Si la page affiche un code, colle-le ici" style="flex:1" autocomplete="off"><button type="button" class="btn dark" data-action="claude-code">Valider le code</button><button type="button" class="btn" data-action="claude-cancel">Annuler</button></div>`
+    : C.note ? `<button class="x close" data-action="claude-note" title="Fermer">×</button><div>${esc(C.note)}</div>` : "";
+  if (code && document.getElementById("code")) document.getElementById("code").value = code;
+  clearTimeout(window.poll); if (C.pending) window.poll = setTimeout(async () => { S = await (await fetch("/api/state")).json(); render(); }, 2000);
+
+  // on garde ce qui est en cours de saisie, et le curseur
+  const active = document.activeElement, focusId = active?.closest?.("#main") ? active.id : "", caret = focusId ? active.selectionStart : null;
+  const keep = [...document.querySelectorAll("#main input[id]")].filter((i) => i.type !== "file").map((i) => [i.id, i.value]);
+  document.getElementById("main").innerHTML =
+    (flash ? `<div class="panel alert">${esc(flash)}</div>` : "") +
+    (S.warning ? `<div class="panel">${esc(S.warning)}</div>` : "") +
+    (!live && showKey ? `<div class="panel"><p><b style="color:var(--ink)">Connecter Qonto.</b> Les chiffres affichés sont une copie figée ${ago(S.fetchedAt)}. Colle l'identifiant et la clé secrète (Qonto › Paramètres › Intégrations et partenariats › Clé API) : ils restent dans le trousseau de ce Mac.</p>
+      <div class="form"><input id="q-login" placeholder="Identifiant (kaoly-4062)" autocomplete="off" style="width:220px"><input id="q-secret" type="password" placeholder="Clé secrète" autocomplete="off" style="width:260px"><button class="btn dark" data-action="key" ${busy ? "disabled" : ""}>Connecter</button></div></div>` : "") +
+    views[tab]();
+  for (const [id, v] of keep) { const i = document.getElementById(id); if (i && v && id !== "q") i.value = v; }
+  if (focusId) { const i = document.getElementById(focusId); if (i) { i.focus(); try { i.setSelectionRange(caret, caret); } catch {} } }
+  placeNote();
+  drawChart();
+  drawRevenue();
+  renderTalk();
+  { // texte grisé de la barre : un exemple propre à l'écran (la valeur déjà saisie n'est pas touchée)
+    const u = S.unpaid[0], vs = S.vendors.filter((v) => v.recurring && !v.term).sort((x, y) => y.average - x.average)[0];
+    document.getElementById("ask").placeholder = tab === "tresorerie" ? `Une ligne à ajouter au plan, ou « et si ${u ? short(u.clientName) + " ne payait jamais" : "on perdait un client"} ? »`
+      : tab === "clients" ? "Une piste : « on devrait signer 12 000 € en janvier, puis 1 500 € par mois »"
+      : sub === "aws" ? "Une question sur AWS : « pourquoi novembre a augmenté ? »"
+      : `Une dépense à venir, ou « combien me coûte ${vs?.name ?? "Anthropic"} ? »`;
+  }
+}
+
+async function ask(text) {
+  if (!text.trim() || thinking) return;
+  thinking = text; showHistory = false; renderTalk();
+  const history = log.flatMap((t) => [{ role: "user", text: t.q }, { role: "assistant", text: t.error ? "(erreur)" : t.reply + (t.done.length ? " [fait : " + t.done.join(" ; ") + "]" : "") }]);
+  const before = new Set((S?.scenarios ?? []).map((s) => s.id));
+  const j = await post("/api/chat", { message: text, history, chatId });
+  thinking = false;
+  if (j?.chat?.chatId) chatId = j.chat.chatId;
+  log.push(j?.chat ? { q: text, reply: j.chat.reply, done: j.chat.done } : { q: text, error: j?.error ?? "Le serveur local ne répond pas.", done: [] });
+  // un scénario vient d'être créé ou corrigé : on le montre
+  const touched = j?.chat?.scenarioIds ?? [], fresh = touched.find((id) => !before.has(id)) ?? touched[0];
+  if (fresh && location.hash !== "#clients") { sel = { kind: "scenario", id: fresh }; location.hash = "#tresorerie"; } // depuis Clients et contrats, on reste : la piste apparaît sur le graphique
+  render();
+}
+
+async function readPdf(file) {
+  if (reading) return;
+  reading = file.name; pdfNote = null; render();
+  let j = null;
+  try { j = await (await fetch("/api/contract-pdf?name=" + encodeURIComponent(file.name), { method: "POST", body: file })).json(); } catch (e) {}
+  reading = false;
+  if (j) S = j;
+  pdfNote = j?.pdf ? { text: [j.pdf.done[0], j.pdf.reply].filter(Boolean).join(". ") } : { error: true, text: j?.error ?? "Le serveur local ne répond pas." };
+  render();
+}
+
+// ───── recherche globale ─────
+function search(text) { const r = search1(text, false); return r.length ? r : search1(text, true); }
+function search1(text, loose) {
+  const n = norm(text), hit = matcher(text, loose), out = [];
+  const go = (hash, then, hl) => () => { setNote(""); armed = null; unseed(); then?.(); location.hash = hash; render(); if (hl) setTimeout(() => { const el = document.getElementById(hl) || (hl.startsWith("inv-") ? document.querySelector(`[data-inv~="${hl.slice(4)}"]`) : null); if (el) { el.scrollIntoView({ block: "center" }); el.classList.add("flash"); } }, 150); };
+  for (const c of S.clients) if (hit(c.name)) out.push({ g: "Clients", t: short(c.name), d: `${money(c.invoicedHT)} facturés`, go: go("#clients", () => openC.add(c.id), "cl-" + c.id) });
+  for (const k of S.contracts) if (hit(k.name, k.clientName)) out.push({ g: "Contrats", t: k.name, d: `${short(k.clientName)} · ${money(k.total)} HT, reste ${money(k.remaining)}`, go: go("#clients", () => openC.add(S.clients.some((c) => c.id === k.clientId) ? k.clientId : "k:" + k.id), "ct-" + k.id) });
+  for (const v of S.vendors) if (hit(v.name, ...v.references)) out.push({ g: "Fournisseurs", t: v.name, d: (hit(v.name) ? "" : `référence ${v.references.find((r) => hit(r))} · `) + (v.recurring ? `${money(v.monthly)} par mois` : `${money(v.total)} au total, dernière fois le ${day(v.last)}`), go: go("#depenses", () => { sub = "abonnements"; q = v.name; }) });
+  for (const i of S.invoices) if (hit(i.number, i.clientName, ...i.items.map((x) => x.title))) out.push({ g: "Factures", t: `${i.number} · ${short(i.clientName)}`, d: `${i.items[0]?.title ?? ""} · ${money(i.ht)} HT · ${etatFacture(i)}${S.unpaid.find((x) => x.number === i.number)?.lateDays ? ", " + lateText(S.unpaid.find((x) => x.number === i.number).lateDays) : ""}`, go: go("#clients", () => openC.add(i.clientId), "inv-" + i.number) });
+  for (const p of S.planned) if (hit(p.label)) out.push({ g: "Annonces", t: p.label, d: `${signed(p.kind === "in" ? p.amount : -p.amount)} le ${day(p.date)}`, go: go("#tresorerie", () => { sel = null; }) });
+  for (const s of S.scenarios) if (hit(s.name)) out.push({ g: "Scénarios", t: s.name, d: runwayText(s.runway), go: go("#tresorerie", () => { sel = { kind: "scenario", id: s.id }; }) });
+  for (const s of S.scenarios) for (const l of ownRows(s)) if (hit(l.label, ...l.labels)) out.push({ g: "Hypothèses", t: l.label, d: `${s.name} · ${signed(l.cells.reduce((a, b) => a + b, 0))}${l.labels.length > 1 ? `, sur ${l.labels.length} mois` : ""}`, go: go("#tresorerie", () => { sel = { kind: "scenario", id: s.id }; }) });
+  for (const r of screens()) if (hit(r.t)) out.push(r);
+  const vendorsHit = new Set(out.filter((r) => r.g === "Fournisseurs").map((r) => norm(r.t)));
+  const pay = [...S.transactions].reverse().filter((t) => hit(t.label, t.vendor) && !vendorsHit.has(norm(t.vendor))).slice(0, 8);
+  for (const t of pay) out.push({ g: "Paiements", t: t.vendor, d: `${day(t.date)} ${t.date.slice(0, 4)} · ${signed(t.in || -t.out)}`, go: go(t.out ? "#depenses" : "#tresorerie", () => { if (t.out) { sub = "abonnements"; q = t.vendor; } }) });
+  // titre affiché qui contient la saisie d'abord, puis les groupes dans l'ordre où ils apparaissent
+  const rank = out.map((r, i) => [norm(r.t).includes(n) ? 0 : 1, i]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(([, i]) => out[i]);
+  const order = [...new Set(rank.map((r) => r.g))];
+  return rank.sort((a, b) => order.indexOf(a.g) - order.indexOf(b.g)).slice(0, 40);
+}
+function screens() {
+  const go = (hash, then) => () => { setNote(""); armed = null; unseed(); then?.(); location.hash = hash; render(); };
+  return [{ g: "Écrans", t: "Trésorerie", d: "", go: go("#tresorerie") }, { g: "Écrans", t: "Clients et contrats", d: "", go: go("#clients") },
+    { g: "Écrans", t: "Dépenses", d: "", go: go("#depenses", () => { sub = "abonnements"; }) }, { g: "Écrans", t: "AWS et crédits", d: "", go: go("#depenses", () => { sub = "aws"; }) }];
+}
+function suggestions() {
+  const late = S.unpaid.filter((i) => i.overdue).map((i) => ({ g: "En retard", t: `${i.number} · ${short(i.clientName)}`, d: `${money(i.ttc)} TTC · ${lateText(i.lateDays)}`,
+    go: () => { openC.add(i.clientId); location.hash = "#clients"; render(); setTimeout(() => { const el = document.getElementById("inv-" + i.number) || document.querySelector(`[data-inv~="${i.number}"]`); if (el) { el.scrollIntoView({ block: "center" }); el.classList.add("flash"); } }, 150); } }));
+  return [...late, ...screens()];
+}
+function paletteDraw() {
+  let last = "";
+  document.getElementById("plist").innerHTML = found.map((r, i) => `${r.g !== last ? `<div class="grp">${last = r.g}</div>` : ""}<div class="res ${i === pick ? "on" : ""}" data-res="${i}"><span class="t">${esc(r.t)}</span><span class="d">${esc(r.d)}</span></div>`).join("") || '<div class="grp">Rien trouvé.</div>';
+}
+function palette(open) {
+  const veil = document.getElementById("veil");
+  veil.hidden = !open;
+  if (open) { const i = document.getElementById("pq"); i.value = ""; i.focus(); pick = 0; lastX = lastY = null; found = suggestions(); paletteDraw(); }
+}
+document.getElementById("pq").addEventListener("input", (e) => {
+  pick = 0;
+  found = e.target.value.trim().length > 1 ? search(e.target.value) : suggestions();
+  paletteDraw();
+});
+function palettePick(n) {
+  pick = Math.max(0, Math.min(found.length - 1, n));
+  document.querySelectorAll("#plist .res").forEach((el) => el.classList.toggle("on", +el.dataset.res === pick));
+  document.querySelector("#plist .res.on")?.scrollIntoView({ block: "nearest" });
+}
+let lastX = null, lastY = null;
+document.getElementById("plist").addEventListener("mousemove", (e) => { if (e.clientX === lastX && e.clientY === lastY) return; lastX = e.clientX; lastY = e.clientY; const r = e.target.closest(".res"); if (r && +r.dataset.res !== pick) { pick = +r.dataset.res; document.querySelectorAll("#plist .res").forEach((el) => el.classList.toggle("on", el === r)); } });
+addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); palette(true); }
+  else if (e.key === "Escape") { palette(false); if (note || armed || adding) { armed = null; adding = null; setNote(""); render(); } if (openC.size && !e.target.closest?.("input, select")) { openC.clear(); render(); } }
+  else if (e.target.id === "pq" && (e.key === "ArrowDown" || e.key === "ArrowUp")) { e.preventDefault(); palettePick(pick + (e.key === "ArrowDown" ? 1 : -1)); }
+  else if (e.key === "Enter" && e.target.id === "pq" && found[pick]) { palette(false); found[pick].go(); }
+  else if (e.key === "Enter" && e.target.classList?.contains("live")) e.target.blur();
+  else if (e.key === "Enter" && /^ad-[lam]$/.test(e.target.id)) { e.preventDefault(); addInline(); }
+});
+
+document.getElementById("composer").addEventListener("submit", (e) => { e.preventDefault(); const i = document.getElementById("ask"); const t = i.value; i.value = ""; ask(t); });
+addEventListener("dragover", (e) => { if (location.hash === "#clients") { e.preventDefault(); document.getElementById("drop")?.classList.add("over"); } });
+addEventListener("dragleave", () => document.getElementById("drop")?.classList.remove("over"));
+addEventListener("drop", (e) => { if (location.hash !== "#clients") return; e.preventDefault(); const f = [...e.dataTransfer.files].find((f) => /pdf$/i.test(f.type) || /\.pdf$/i.test(f.name)); if (f) readPdf(f); });
+document.addEventListener("input", (e) => { e.target.classList?.remove("bad"); if (e.target.id === "q") { q = e.target.value; render(); } });
+
+document.addEventListener("change", (e) => {
+  const d = e.target.dataset, v = e.target.value;
+  if (e.target.id === "q") return;
+  if (e.target.id === "model") post("/api/config", { claude: { model: v } });
+  if (e.target.id === "acct") {
+    if (v === "+") post("/api/claude-login");
+    else if (v === "-") post("/api/config", { removeClaudeAccount: S.claude.account });
+    else post("/api/config", { claude: { account: v } });
+  }
+  if (e.target.id === "pdf" && e.target.files[0]) readPdf(e.target.files[0]);
+  if (d.kField) post("/api/config", { contract: { id: d.kId, [d.kField]: e.target.type === "number" ? +v : v } });
+  if (d.limit) post("/api/config", { awsDailyLimit: +v });
+  if (d.vendorTerm) post("/api/config", { vendors: { [d.vendorTerm]: { term: +v || null } } });
+  if (d.vendorClient) post("/api/config", { vendors: { [d.vendorClient]: { client: v || null } } });
+  if (d.vendorRecurring) { const v = S.vendors.find((x) => x.key === d.vendorRecurring), on = e.target.checked; undoable(v ? (on ? `${v.name} compté chaque mois : ${money(Math.round(v.monthly))}` : `${v.name} compté en moyenne : ${money(Math.round(v.average))}`) : "", { vendors: { [d.vendorRecurring]: { recurring: on } } }); }
+  if (d.revenue) revenue(d.revenue, e.target.checked);
+});
+function addInline() {
+  const val = (id) => document.getElementById(id).value.trim();
+  const label = val("ad-l").trim(), amount = +val("ad-a"), m = val("ad-m");
+  if (!label) return missing("ad-l"); if (!amount) return missing("ad-a"); if (!m) return missing("ad-m");
+  const today = S.now.slice(0, 10), date = m + "-01" < today ? today : m + "-01", hyp = adding === "hyp-add", sc = sel?.kind === "scenario" ? sel.id : null;
+  adding = null;
+  return hyp ? undoable(`Hypothèse ajoutée : ${label}`, { addFlow: { scenario: sc, label, amount, date } }, "tabs") : undoable(`Ligne ajoutée : ${label}`, { addPlanned: { kind: amount > 0 ? "in" : "out", label, amount: Math.abs(amount), date } }, "tabs");
+}
+function missing(id) { const i = document.getElementById(id); i.classList.add("bad"); i.focus(); }
+function revenue(key, on) { const l = S.revenueLines.find((x) => x.key === key); return undoable(l ? `${l.title} compté ${on ? `chaque mois : ${money(l.ht)}` : "une seule fois"}` : "", { revenue: { [key]: on } }); }
+// une valeur cliquée devient un champ ; on enregistre en sortant, sinon elle redevient du texte
+function edit(span) {
+  const type = span.dataset.ed, input = document.createElement(type === "client" ? "select" : "input");
+  if (type === "client") input.innerHTML = `<option value="">aucun client</option>${S.clients.map((c) => `<option value="${esc(c.id)}">${esc(short(c.name))}</option>`).join("")}`;
+  else { input.type = type; if (type === "number") { input.min = 0; input.step = "any"; } }
+  input.className = "live"; input.value = span.dataset.value;
+  Object.assign(input.dataset, JSON.parse(span.dataset.attrs));
+  let changed = false;
+  input.addEventListener("change", () => { changed = true; });
+  input.addEventListener("blur", () => setTimeout(() => { if (!changed && !busy) render(); }, 120));
+  span.replaceWith(input); input.focus();
+  try { if (type !== "number") input.showPicker(); else input.select(); } catch {}
+}
+document.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.classList?.contains("ed")) { e.preventDefault(); edit(e.target); }
+  if ((e.key === "Enter" || e.key === " ") && e.target.classList?.contains("chev")) { e.preventDefault(); e.target.click(); } });
+
+// survol d'un mois de la trésorerie : toute la colonne s'éclaire, courbe et tableau, comme au clic
+document.addEventListener("mouseover", (e) => {
+  const c = e.target.closest?.("#plot .band, .plan:not(.ca) [data-col]")?.dataset.col;
+  document.querySelectorAll("#main .hov").forEach((x) => x.classList.remove("hov"));
+  if (c != null) document.querySelectorAll(`#plot .band[data-col="${c}"], .plan:not(.ca) [data-col="${c}"]`).forEach((x) => x.classList.add("hov"));
+});
+document.addEventListener("click", async (e) => {
+  const t = e.target, d = t.dataset, val = (id) => document.getElementById(id).value.trim();
+  if (t.classList.contains("ed")) return edit(t);
+  if (t.id === "find" || t.closest("#find")) return palette(true);
+  if (t.id === "veil") return palette(false);
+  if (d.res) { palette(false); return found[+d.res].go(); }
+  if (d.scenarioClose) { e.stopPropagation(); if (sel?.id === d.scenarioClose) sel = null; { const sc = S.scenarios.find((x) => x.id === d.scenarioClose), k = sc ? ownRows(sc).length : 0; return undoable(`Scénario ${sc?.name ?? ""} supprimé${k ? " : " + plural(k, "hypothèse") : ""}`, { closeScenario: d.scenarioClose }, "tabs"); } }
+  const line = t.closest("[data-line]");
+  if (line) { setNote(""); armed = null; unseed(); sel = line.dataset.line === "base" ? null : { kind: "scenario", id: line.dataset.line }; return render(); }
+  const mc = t.closest("#plot .band, .plan:not(.ca) [data-col]"); // un mois : sa bande dans la courbe, son en-tête ou une de ses cases
+  if (mc) { col = +mc.dataset.col === col ? null : +mc.dataset.col; return render(); }
+  if (d.flowDel || d.flowOk) return undoable((d.flowOk ? `Passée dans le classique : ${d.label}` : `Hypothèse retirée : ${d.label}`) + surMois(+d.n), { flow: { scenario: d.sc ?? sel.id, indexes: (d.flowDel ?? d.flowOk).split(",").map(Number), confirm: !!d.flowOk, everywhere: !!d.all } });
+  if (d.sub) { sub = d.sub; render(); }
+  const co = t.closest("[data-c-open]");
+  if (co && !t.closest("button, a, input, label, .ed")) { const k = co.dataset.cOpen; openC.has(k) ? openC.delete(k) : openC.add(k); render(); }
+  if (d.kOpen) { openK.has(d.kOpen) ? openK.delete(d.kOpen) : openK.add(d.kOpen); render(); }
+  if (d.action === "credits-toggle") { showCredits = !showCredits; render(); }
+  if (d.action === "guards-toggle") { showGuards = true; render(); document.getElementById("g-email")?.focus(); }
+  if (d.action === "add-toggle") { showAdd = !showAdd; render(); }
+  if (d.action === "pipe-add") document.getElementById("ask").focus();
+  if (d.action === "all-once") { allOnce = "once"; render(); }
+  if (d.vendorExc) { const v = S.vendors.find((x) => x.key === d.vendorExc); return undoable(v ? (d.on ? `${v.name} : exceptionnel, sorti de la moyenne (${money(Math.round(v.average))} par mois)` : `${v.name} : de nouveau dans la moyenne`) : "", { vendors: { [d.vendorExc]: { exceptional: !!d.on } } }); }
+  if (d.action === "claude-code" && val("code")) post("/api/claude-login-code", { code: val("code") });
+  if (d.action === "claude-cancel") post("/api/claude-login-cancel");
+  if (d.action === "claude-note") post("/api/config", { claude: {} });
+  if (d.action === "guards" && !(val("g-email") && +val("g-amount") > 0)) missing(val("g-email") ? "g-amount" : "g-email");
+  else if (d.action === "guards") post("/api/aws-guards", { email: val("g-email"), amount: +val("g-amount") });
+  if (d.action === "refresh") post("/api/refresh");
+  if (d.action === "aws") post("/api/aws-refresh");
+  if (d.action === "aws-login") { awsLogin = true; await post("/api/aws-login"); awsLogin = false; render(); }
+  if (d.action === "contract" && !(val("k-name") && (+val("k-deposit") || +val("k-balance") || +val("k-monthly")))) missing(val("k-name") ? "k-deposit" : "k-name");
+  if (d.action === "contract" && val("k-name") && (+val("k-deposit") || +val("k-balance") || +val("k-monthly"))) { const c = { clientId: val("k-client"), name: val("k-name"), deposit: +val("k-deposit"), balance: +val("k-balance"), dueDate: val("k-due"), monthly: +val("k-monthly") }; showAdd = false; post("/api/config", { contract: c }); }
+  if (d.revAsk) { askRev = d.revAsk; return render(); }
+  if (d.revNo) { askRev = null; refusals.add(d.revNo); try { localStorage.setItem("kaoly-chaque-mois-non", JSON.stringify([...refusals])); } catch {} return render(); }
+  if (d.revYes) { askRev = null; return revenue(d.revYes, true); }
+  if (d.contractOk) post("/api/config", { contract: { id: d.contractOk, toCheck: false } });
+  if (d.action === "pdf-close") { pdfNote = null; render(); }
+  if (d.contractDel) undoable(`Contrat retiré : ${S.contracts.find((k) => k.id === d.contractDel)?.name ?? ""}`, { removeContract: d.contractDel });
+  if (d.contractInv) { const k = S.contracts.find((k) => k.id === d.contractInv); post("/api/config", { contract: { id: k.id, invoices: k.invoices.includes(d.number) ? k.invoices.filter((n) => n !== d.number) : [...k.invoices, d.number] } }); }
+  if (d.action === "key-toggle") { showKey = !showKey; render(); document.querySelector("main").scrollTop = 0; }
+  if (d.action === "key") post("/api/qonto-key", { login: val("q-login"), secret: val("q-secret") });
+  if (d.action === "credit" && !val("c-amount")) missing("c-amount");
+  else if (d.action === "credit") post("/api/config", { credits: [...(S.config.credits ?? []), { name: val("c-name") || "Crédits AWS", amount: val("c-amount"), expires: val("c-expires"), note: "" }] });
+  if (d.creditDel) undoable(`Crédits retirés : ${(S.config.credits ?? [])[+d.creditDel]?.name ?? ""}`, { credits: (S.config.credits ?? []).filter((_, i) => i !== +d.creditDel) });
+  if (d.plannedDel) undoable(`Ligne retirée : ${d.label}`, { removePlanned: d.plannedDel.split(",") });
+  if (d.action === "hyp-keep") { armed = sel?.id ?? null; return render(); }
+  if (d.action === "hyp-keep-no") { armed = null; return render(); }
+  if (d.action === "hyp-keep-yes") { const sc = S.scenarios.find((x) => x.id === sel?.id && x.id === armed); if (!sc) return; sel = null; return undoable(`Scénario ${sc.name} passé dans le classique : ${plural(+d.n, "hypothèse")}`, { keepScenario: sc.id }, "tabs"); }
+  if (d.action === "hyp-add" || d.action === "line-add") { adding = d.action; unseed(); render(); return document.getElementById("ad-l")?.focus(); }
+  if (d.action === "undo-note") { await post("/api/undo"); return; }
+  if (d.action === "undo") { await post("/api/undo"); log.at(-1).undone = true; render(); }
+  if (d.action === "talk-close") { log = []; chatId = null; renderTalk(); } // la discussion reste dans l'historique
+  if (t.id === "hist") { showHistory = !showHistory; renderTalk(); }
+  if (d.action === "hist-close") { showHistory = false; renderTalk(); }
+  if (d.chatDel) { await post("/api/config", { removeChat: d.chatDel }); if (chatId === d.chatDel) { chatId = null; log = []; } renderTalk(); }
+  else if (d.chatOpen) { const c = S.chats.find((c) => c.id === d.chatOpen); if (c) { chatId = c.id; log = c.turns.map((x) => ({ ...x })); showHistory = false; renderTalk(); } }
+});
+addEventListener("hashchange", () => { setNote(""); armed = null; unseed(); render(); document.querySelector("main").scrollTop = 0; });
+
+(async () => {
+  render();
+  S = await (await fetch("/api/state")).json();
+  render();
+  // Qonto est gratuit : on relit seul si la copie a plus d'une heure. AWS, jamais sans clic.
+  if (S.qontoConnected && Date.now() - Date.parse(S.fetchedAt) > 36e5) post("/api/refresh");
+})();
+</script>
+</html>
